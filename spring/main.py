@@ -23,6 +23,9 @@ def main():
     parser.add_option('-r', dest='ratio', type='float', default=1.0,
                       help='fractional ratio of set operations (1.0 by default)',
                       metavar=1.0)
+    parser.add_option('-i', dest='items', type='int', default=0,
+                      help='number of existing items in dataset (0 by default)',
+                      metavar='1000000')
     parser.add_option('-o', dest='ops', type='int', default=float('inf'),
                       help='total number of operations (infinity by default)',
                       metavar='1000')
