@@ -4,7 +4,7 @@ from wgen import WorkloadGen
 
 
 def get_parser():
-    usage = ('%prog [-n host:port] -u -p [-b bucket] '
+    usage = ('%prog [-n host:port] [-u user] [-p pass] [-b bucket] '
              '[-s size] [-r set ratio] [-o #ops] [w #workers]')
 
     parser = OptionParser(usage)
@@ -13,9 +13,9 @@ def get_parser():
     parser.add_option('-n', dest='node', default='127.0.0.1:8091',
                       help='node address (host:port)',
                       metavar='127.0.0.1:8091')
-    parser.add_option('-u', dest='username',
+    parser.add_option('-u', dest='username', default='',
                       help='REST username', metavar='Administrator')
-    parser.add_option('-p', dest='password',
+    parser.add_option('-p', dest='password', default='',
                       help='REST password', metavar='password')
     parser.add_option('-b', dest='bucket', default='default',
                       help='bucket name', metavar='bucket')
@@ -40,9 +40,6 @@ def get_parser():
 
 def parse_args(parser):
     options, args = parser.parse_args()
-
-    if not options.username or not options.password:
-        parser.error('Missing credentials')
 
     if not 0 <= options.ratio <= 1:
         parser.error('Invalid ratio. Allowed range is [0.0, 1.0].')
