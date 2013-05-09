@@ -1,5 +1,7 @@
 from optparse import OptionParser
 
+from wgen import WorkloadGen
+
 
 def main():
     usage = ('spring [-n host:port] -u -p [-b bucket] '
@@ -37,6 +39,8 @@ def main():
     if not options.username or not options.password:
         parser.error('Missing credentials')
 
+    wg = WorkloadGen(options)
+    wg.run()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
