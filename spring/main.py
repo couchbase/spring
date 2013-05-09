@@ -3,11 +3,12 @@ from optparse import OptionParser
 from wgen import WorkloadGen
 
 
-def main():
-    usage = ('spring [-n host:port] -u -p [-b bucket] '
+def get_parser():
+    usage = ('%prog [-n host:port] -u -p [-b bucket] '
              '[-s size] [-r set ratio] [-o #ops] [w #workers]')
 
     parser = OptionParser(usage)
+    parser.prog = 'sping'
 
     parser.add_option('-n', dest='node', default='127.0.0.1:8091',
                       help='node address (host:port)',
@@ -34,11 +35,31 @@ def main():
     parser.add_option('-w', dest='workers', default=1, type="int",
                       help='number of workers (1 by default)', metavar='10')
 
+    return parser
+
+
+def parse_args(parser):
     options, args = parser.parse_args()
 
     if not options.username or not options.password:
         parser.error('Missing credentials')
 
+    if not 0 <= options.ratio <= 1:
+        parser.error('Invalid ratio. Allowed range is [0.0, 1.0].')
+
+    if options.ops == float('inf') and options.ratio:
+        parser.error('Infinite loop allowed only for read-only workloads')
+
+    if options.ratio < 1 and not options.items:
+        parser.error('Trying to read indefinite dataset. '
+                     'Please specify number of items in dataset (-i)')
+
+    return options
+
+
+def main():
+    parser = get_parser()
+    options = parse_args(parser)
     wg = WorkloadGen(options)
     wg.run()
 
