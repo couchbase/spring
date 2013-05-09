@@ -1,3 +1,4 @@
+import sys
 import random
 from multiprocessing import Process
 
@@ -31,6 +32,8 @@ class WorkloadGen(object):
             ops_per_worker -= self.BATCH_SIZE
 
     def _run_worker(self, sid):
+        sys.stderr = open('/dev/null', 'w')
+
         host, port = self.options.node.split(':')
         cb = CBGen(host, port, self.options.username, self.options.password,
                    self.options.bucket)
