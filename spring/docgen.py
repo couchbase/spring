@@ -3,7 +3,22 @@ import random
 import string
 
 
-class DocGen(object):
+class Iterator(object):
+
+    def __iter__(self):
+        return self
+
+
+class RandKeyGen(Iterator):
+
+    def __init__(self, items):
+        self.items = items
+
+    def next(self):
+        return random.randint(1, self.items)
+
+
+class DocGen(Iterator):
 
     CHARS = list(string.letters + string.digits)
     SIZE_VARIATION = 0.25  # 25%
@@ -11,9 +26,6 @@ class DocGen(object):
 
     def __init__(self, avg_size):
         self.avg_size = avg_size
-
-    def __iter__(self):
-        return self
 
     @classmethod
     def _get_variation_coeff(cls):
@@ -34,6 +46,6 @@ class DocGen(object):
         random.shuffle(self.CHARS)
 
         next_length = self._get_variation_coeff() * self.avg_size
-        key = self._build_short_string()
-        doc = {key: self._build_long_string(next_length)}
-        return key, doc
+        return {
+            self._build_short_string(): self._build_long_string(next_length)
+        }
