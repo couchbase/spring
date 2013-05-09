@@ -15,7 +15,17 @@ class RandKeyGen(Iterator):
         self.items = items
 
     def next(self):
-        return random.randint(1, self.items)
+        return 'key-{}'.format(random.randint(1, self.items))
+
+
+class SeqKeyGen(Iterator):
+
+    def __init__(self, offset):
+        self.offset = offset
+
+    def next(self):
+        self.offset += 1
+        return 'key-{}'.format(self.offset)
 
 
 class DocGen(Iterator):
