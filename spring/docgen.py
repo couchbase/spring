@@ -18,24 +18,15 @@ class RandKeyGen(Iterator):
         return 'key-{0}'.format(random.randint(1, self.items))
 
 
-class SeqKeyGen(Iterator):
-
-    def __init__(self, offset):
-        self.offset = offset
-
-    def next(self):
-        self.offset += 1
-        return 'key-{0}'.format(self.offset)
-
-
 class DocGen(Iterator):
 
     CHARS = list(string.letters + string.digits)
     SIZE_VARIATION = 0.25  # 25%
     KEY_LENGTH = 10
 
-    def __init__(self, avg_size):
+    def __init__(self, avg_size, offset):
         self.avg_size = avg_size
+        self.offset = offset
 
     @classmethod
     def _get_variation_coeff(cls):
@@ -56,6 +47,8 @@ class DocGen(Iterator):
         random.shuffle(self.CHARS)
 
         next_length = self._get_variation_coeff() * self.avg_size
-        return {
-            self._build_short_string(): self._build_long_string(next_length)
-        }
+        self.offset += 1
+
+        key = 'key-{0}'.format(self.offset)
+        doc = {self._build_short_string(): self._build_long_string(next_length)}
+        return key, doc
