@@ -1,6 +1,6 @@
 from optparse import OptionParser
 
-from wgen import WorkloadGen
+from spring.wgen import WorkloadGen
 
 
 def get_parser():

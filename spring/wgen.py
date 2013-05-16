@@ -2,8 +2,8 @@ import sys
 import random
 from multiprocessing import Process
 
-from cbgen import CBGen
-from docgen import RandKeyGen, DocGen
+from spring.cbgen import CBGen
+from spring.docgen import RandKeyGen, DocGen
 
 
 class WorkloadGen(object):
