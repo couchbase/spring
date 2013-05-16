@@ -10,12 +10,13 @@ class WorkloadGen(object):
 
     BATCH_SIZE = 100
 
-    def __init__(self, options):
-        self.options = options
+    def __init__(self, workload_settings, target_settings):
+        self.ws = workload_settings
+        self.ts = target_settings
 
     def _gen_rw_sequence(self):
-        ops = int(self.options.ratio * self.BATCH_SIZE) * [1] + \
-            int((1 - self.options.ratio) * self.BATCH_SIZE) * [0]
+        ops = int(self.ws.ratio * self.BATCH_SIZE) * [1] + \
+            int((1 - self.ws.ratio) * self.BATCH_SIZE) * [0]
         random.shuffle(ops)
         return ops
 
@@ -33,20 +34,20 @@ class WorkloadGen(object):
     def _run_worker(self, sid):
         sys.stderr = open('/dev/null', 'w')
 
-        host, port = self.options.node.split(':')
-        cb = CBGen(host, port, self.options.username, self.options.password,
-                   self.options.bucket)
+        host, port = self.ts.node.split(':')
+        cb = CBGen(host, port, self.ts.username, self.ts.password,
+                   self.ts.bucket)
 
-        ops_per_worker = self.options.ops / self.options.workers
-        offset = sid * ops_per_worker + self.options.items
-        rkg = RandKeyGen(self.options.items)
-        dg = DocGen(self.options.size, offset)
+        ops_per_worker = self.ws.ops / self.ws.workers
+        offset = sid * ops_per_worker + self.ws.items
+        rkg = RandKeyGen(self.ws.items)
+        dg = DocGen(self.ws.size, offset)
 
         self._run_workload(cb, ops_per_worker, rkg, dg)
 
     def run(self):
         workers = list()
-        for sid in range(self.options.workers):
+        for sid in range(self.ws.workers):
             worker = Process(target=self._run_worker, args=(sid,))
             worker.daemon = False
             worker.start()

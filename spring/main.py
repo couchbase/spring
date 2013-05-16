@@ -1,5 +1,6 @@
 from optparse import OptionParser
 
+from spring.settings import WorkloadSettings, TargetSettings
 from spring.wgen import WorkloadGen
 
 
@@ -57,7 +58,10 @@ def parse_args(parser):
 def main():
     parser = get_parser()
     options = parse_args(parser)
-    wg = WorkloadGen(options)
+
+    ws = WorkloadSettings(options)
+    ts = TargetSettings(options)
+    wg = WorkloadGen(ws, ts)
     wg.run()
 
 if __name__ == '__main__':
