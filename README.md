@@ -19,7 +19,7 @@ Usage
 -----
 
         $ spring -h
-        usage: spring [-s SIZE] [-r SET RATIO] [-o #OPS] [w #WORKERS] [cb://user:pass@host:port/bucket]
+        usage: spring [-s SIZE] [-r SET RATIO] [-i #ITEMS] [-o #OPS] [w #WORKERS] [cb://user:pass@host:port/bucket]
 
         positional arguments:
           URI            Connection URI
@@ -27,11 +27,11 @@ Usage
         optional arguments:
           -h, --help     show this help message and exit
           -v, --version  show program's version number and exit
-          -s SIZE        average value size in bytes (2048 by default)
-          -r RATIO       fractional ratio of set operations (1.0 by default)
-          -i ITEMS       number of existing items (0 by default)
-          -o OPS         total number of operations (infinity by default)
-          -w WORKERS     number of workers (1 by default)
+          -s             average value size in bytes (2048 by default)
+          -r             fractional ratio of set operations (1.0 by default)
+          -i             number of existing items (0 by default)
+          -o             total number of operations (infinity by default)
+          -n             number of workers (1 by default)
 
 Examples
 --------

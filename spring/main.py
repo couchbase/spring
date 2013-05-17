@@ -8,8 +8,9 @@ from spring.wgen import WorkloadGen
 class ArgParser(ArgumentParser):
 
     PROG = 'spring'
-    USAGE = ('%(prog)s [-s SIZE] [-r SET RATIO] [-o #OPS] [w #WORKERS] '
-             '[cb://user:pass@host:port/bucket]')
+    USAGE = (
+        '%(prog)s [-s SIZE] [-r SET RATIO] [-i #ITEMS] [-o #OPS] [w #WORKERS] '
+        '[cb://user:pass@host:port/bucket]')
     VERSION = '1.2.0'
 
     def __init__(self):
@@ -25,23 +26,23 @@ class ArgParser(ArgumentParser):
             help='Connection URI'
         )
         self.add_argument(
-            '-s', dest='size', type=int, default=2048,
+            '-s', dest='size', type=int, default=2048, metavar='',
             help='average value size in bytes (2048 by default)'
         )
         self.add_argument(
-            '-r', dest='ratio', type=float, default=1.0,
+            '-r', dest='ratio', type=float, default=1.0, metavar='',
             help='fractional ratio of set operations (1.0 by default)',
         )
         self.add_argument(
-            '-i', dest='items', type=int, default=0,
+            '-i', dest='items', type=int, default=0, metavar='',
             help='number of existing items (0 by default)',
         )
         self.add_argument(
-            '-o', dest='ops', type=int, default=float('inf'),
+            '-o', dest='ops', type=int, default=float('inf'), metavar='',
             help='total number of operations (infinity by default)'
         )
         self.add_argument(
-            '-w', dest='workers', type=int, default=1,
+            '-n', dest='workers', type=int, default=1, metavar='',
             help='number of workers (1 by default)'
         )
 
