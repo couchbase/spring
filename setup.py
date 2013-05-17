@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='spring',
-    version='1.2.1',
+    version='1.3.0',
     description='Simple Couchbase workload generator based on pylibcouchbase',
     author='Pavel Paulau',
     author_email='pavel.paulau@gmail.com',

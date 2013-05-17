@@ -30,16 +30,20 @@ class ArgParser(ArgumentParser):
             help='average value size in bytes (2048 by default)'
         )
         self.add_argument(
-            '-r', dest='ratio', type=float, default=1.0, metavar='',
-            help='fractional ratio of set operations (1.0 by default)',
-        )
-        self.add_argument(
             '-i', dest='items', type=int, default=0, metavar='',
             help='number of existing items (0 by default)',
         )
         self.add_argument(
+            '-w', dest='working_set', type=float, default=1, metavar='',
+            help='fractional ratio of working set (1.0 by default)'
+        )
+        self.add_argument(
             '-o', dest='ops', type=int, default=float('inf'), metavar='',
             help='total number of operations (infinity by default)'
+        )
+        self.add_argument(
+            '-r', dest='ratio', type=float, default=1.0, metavar='',
+            help='fractional ratio of set operations (1.0 by default)',
         )
         self.add_argument(
             '-n', dest='workers', type=int, default=1, metavar='',
@@ -49,7 +53,7 @@ class ArgParser(ArgumentParser):
     def parse_args(self, *args):
         args = super(ArgParser, self).parse_args()
 
-        if not 0 <= args.ratio <= 1:
+        if not 0 <= args.ratio <= 1 or not 0 <= args.working_set <= 1:
             self.error('Invalid ratio. Allowed range is [0.0, 1.0].')
 
         if args.ops == float('inf') and args.ratio:

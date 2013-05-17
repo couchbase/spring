@@ -28,9 +28,10 @@ Usage
           -h, --help     show this help message and exit
           -v, --version  show program's version number and exit
           -s             average value size in bytes (2048 by default)
-          -r             fractional ratio of set operations (1.0 by default)
           -i             number of existing items (0 by default)
+          -w             fractional ratio of working set (1.0 by default)
           -o             total number of operations (infinity by default)
+          -r             fractional ratio of set operations (1.0 by default)
           -n             number of workers (1 by default)
 
 Examples

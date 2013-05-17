@@ -10,6 +10,7 @@ class WorkloadSettings(object):
         self.ratio = options.ratio
         self.items = options.items
         self.ops = options.ops
+        self.working_set = options.working_set
         self.workers = options.workers
 
 
