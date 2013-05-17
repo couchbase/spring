@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from logger import logger
 
 from spring.settings import WorkloadSettings, TargetSettings
 from spring.wgen import WorkloadGen
@@ -73,4 +74,4 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print '\nFinished workload'
+        logger.info('Finished workload')

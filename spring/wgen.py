@@ -1,6 +1,8 @@
 import random
 from multiprocessing import Process
 
+from logger import logger
+
 from spring.cbgen import CBGen
 from spring.docgen import RandKeyGen, DocGen
 
@@ -46,9 +48,12 @@ class WorkloadGen(object):
         workers = list()
         for sid in range(self.ws.workers):
             worker = Process(target=self._run_worker, args=(sid,))
+            worker.name = 'Worker-{0}'.format(sid)
             worker.daemon = False
             worker.start()
             workers.append(worker)
+            logger.info('Started {0}'.format(worker.name))
 
         for worker in workers:
             worker.join()
+            logger.info('Stopped {0}'.format(worker.name))

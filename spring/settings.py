@@ -1,5 +1,6 @@
-import sys
 from urlparse import urlparse
+
+from logger import logger
 
 
 class WorkloadSettings(object):
@@ -16,10 +17,10 @@ class TargetSettings(object):
 
     def __init__(self, target_uri):
         params = urlparse(target_uri)
+        if not params.hostname or not params.port or not params.path:
+            logger.interrupt('Invalid connection URI')
+
         self.node = '{0}:{1}'.format(params.hostname, params.port)
         self.bucket = params.path[1:]
         self.username = params.username or ''
         self.password = params.password or ''
-
-        if not params.scheme or not self.node or not self.bucket:
-            sys.exit('Invalid connection URI')
