@@ -32,18 +32,65 @@ class DocGen(Iterator):
         return random.uniform(1 - cls.SIZE_VARIATION, 1 + cls.SIZE_VARIATION)
 
     @staticmethod
-    def _build_long_string(key, length):
-        alphabet = md5(key).hexdigest() + md5(key[::-1]).hexdigest()
+    def _build_alphabet(key):
+        return md5(key).hexdigest() + md5(key[::-1]).hexdigest()
 
-        l_int = int(length)
+    @staticmethod
+    def _build_name(alphabet):
+        return '{0} {1}'.format(alphabet[:6], alphabet[6:12])
+
+    @staticmethod
+    def _build_email(alphabet):
+        return '{0}@{1}.com'.format(alphabet[12:18], alphabet[18:24])
+
+    @staticmethod
+    def _build_city(alphabet):
+        return alphabet[24:30]
+
+    @staticmethod
+    def _build_realm(alphabet):
+        return alphabet[30:36]
+
+    @staticmethod
+    def _build_coins(alphabet):
+        return max(0.0, int(alphabet[36:40], 16) / 100.0)
+
+    @staticmethod
+    def _build_category(alphabet):
+        return int(alphabet[41], 16) % 3
+
+    @staticmethod
+    def _build_achievements(alphabet):
+        achievement = 256
+        achievements = []
+        for i, char in enumerate(alphabet[42:58]):
+            achievement = (achievement + int(char, 16) * i) % 512
+            if achievement < 256:
+                achievements.append(achievement)
+        return achievements
+
+    @staticmethod
+    def _build_body(alphabet, length):
+        length_int = int(length)
         num_slices = int(math.ceil(length / len(alphabet)))
-        rand_chars = num_slices * alphabet
-        return rand_chars[:l_int]
+        body = num_slices * alphabet
+        return body[:length_int]
 
     def next(self):
         next_length = self._get_variation_coeff() * self.avg_size
         self.offset += 1
 
         key = 'key-{0}'.format(self.offset)
-        doc = {'body': self._build_long_string(key, next_length)}
+        alphabet = self._build_alphabet(key)
+        doc = {
+            'name': self._build_name(alphabet),
+            'email': self._build_email(alphabet),
+            'city': self._build_city(alphabet),
+            'realm': self._build_realm(alphabet),
+            'coins': self._build_coins(alphabet),
+            'category': self._build_category(alphabet),
+            'achievements': self._build_achievements(alphabet),
+            'body': self._build_body(alphabet, next_length)
+        }
+
         return key, doc
