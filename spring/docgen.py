@@ -1,6 +1,6 @@
 import math
 import random
-import string
+from hashlib import md5
 
 
 class Iterator(object):
@@ -20,7 +20,6 @@ class RandKeyGen(Iterator):
 
 class DocGen(Iterator):
 
-    CHARS = list(string.letters + string.digits)
     SIZE_VARIATION = 0.25  # 25%
     KEY_LENGTH = 10
 
@@ -32,23 +31,19 @@ class DocGen(Iterator):
     def _get_variation_coeff(cls):
         return random.uniform(1 - cls.SIZE_VARIATION, 1 + cls.SIZE_VARIATION)
 
-    @classmethod
-    def _build_short_string(cls):
-        return ''.join(cls.CHARS)[-cls.KEY_LENGTH:]
+    @staticmethod
+    def _build_long_string(key, length):
+        alphabet = md5(key).hexdigest() + md5(key[::-1]).hexdigest()
 
-    @classmethod
-    def _build_long_string(cls, length):
         l_int = int(length)
-        num_slices = int(math.ceil(length / len(cls.CHARS)))
-        rand_chars = num_slices * cls.CHARS
-        return ''.join(rand_chars)[:l_int]
+        num_slices = int(math.ceil(length / len(alphabet)))
+        rand_chars = num_slices * alphabet
+        return rand_chars[:l_int]
 
     def next(self):
-        random.shuffle(self.CHARS)
-
         next_length = self._get_variation_coeff() * self.avg_size
         self.offset += 1
 
         key = 'key-{0}'.format(self.offset)
-        doc = {self._build_short_string(): self._build_long_string(next_length)}
+        doc = {'body': self._build_long_string(key, next_length)}
         return key, doc
