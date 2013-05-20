@@ -5,18 +5,16 @@ from spring.settings import WorkloadSettings, TargetSettings
 from spring.wgen import WorkloadGen
 
 
-class ArgParser(ArgumentParser):
+class CLIParser(ArgumentParser):
 
     PROG = 'spring'
     USAGE = (
         '%(prog)s [-s SIZE] [-r SET RATIO] [-i #ITEMS] [-o #OPS] [w #WORKERS] '
         '[cb://user:pass@host:port/bucket]')
-    VERSION = '1.2.0'
+    VERSION = '1.4.1'
 
     def __init__(self):
-        super(ArgParser, self).__init__(
-            prog=self.PROG, usage=self.USAGE, version=self.VERSION
-        )
+        super(CLIParser, self).__init__(prog=self.PROG, usage=self.USAGE)
         self._add_arguments()
 
     def _add_arguments(self):
@@ -49,9 +47,12 @@ class ArgParser(ArgumentParser):
             '-n', dest='workers', type=int, default=1, metavar='',
             help='number of workers (1 by default)'
         )
+        self.add_argument(
+            '-v', action='version', version=self.VERSION
+        )
 
     def parse_args(self, *args):
-        args = super(ArgParser, self).parse_args()
+        args = super(CLIParser, self).parse_args()
 
         if not 0 <= args.ratio <= 1 or not 0 <= args.working_set <= 1:
             self.error('Invalid ratio. Allowed range is [0.0, 1.0].')
@@ -67,7 +68,7 @@ class ArgParser(ArgumentParser):
 
 
 def main():
-    parser = ArgParser()
+    parser = CLIParser()
     args = parser.parse_args()
 
     ws = WorkloadSettings(args)
