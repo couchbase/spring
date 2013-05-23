@@ -11,11 +11,15 @@ class Iterator(object):
 
 class RandKeyGen(Iterator):
 
-    def __init__(self, items):
+    def __init__(self, items, prefix=None):
         self.items = items
+        self.prefix = prefix
 
     def next(self):
-        return 'key-{0}'.format(random.randint(1, self.items))
+        key = 'key-{0}'.format(random.randint(1, self.items))
+        if self.prefix is not None:
+            key = self.prefix + key
+        return key
 
 
 class DocGen(Iterator):
@@ -23,9 +27,10 @@ class DocGen(Iterator):
     SIZE_VARIATION = 0.25  # 25%
     KEY_LENGTH = 10
 
-    def __init__(self, avg_size, offset):
+    def __init__(self, avg_size, offset, prefix=None):
         self.avg_size = avg_size
         self.offset = offset
+        self.prefix = prefix
 
     @classmethod
     def _get_variation_coeff(cls):
@@ -92,5 +97,7 @@ class DocGen(Iterator):
             'achievements': self._build_achievements(alphabet),
             'body': self._build_body(alphabet, next_length)
         }
+        if self.prefix is not None:
+            key = self.prefix + key
 
         return key, doc

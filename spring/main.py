@@ -11,7 +11,7 @@ class CLIParser(ArgumentParser):
     USAGE = (
         '%(prog)s [-s SIZE] [-r SET RATIO] [-i #ITEMS] [-o #OPS] [w #WORKERS] '
         '[cb://user:pass@host:port/bucket]')
-    VERSION = '1.4.1'
+    VERSION = '1.5.1'
 
     def __init__(self):
         super(CLIParser, self).__init__(prog=self.PROG, usage=self.USAGE)

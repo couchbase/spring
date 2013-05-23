@@ -40,8 +40,8 @@ class WorkloadGen(object):
         ops_per_worker = self.ws.ops / self.ws.workers
         offset = sid * ops_per_worker + self.ws.items
         working_set = int(self.ws.working_set * self.ws.items)
-        rkg = RandKeyGen(working_set)
-        dg = DocGen(self.ws.size, offset)
+        rkg = RandKeyGen(working_set, self.ts.prefix)
+        dg = DocGen(self.ws.size, offset, self.ts.prefix)
 
         self._run_workload(cb, ops_per_worker, rkg, dg)
 
