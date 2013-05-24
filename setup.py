@@ -1,11 +1,11 @@
 from setuptools import setup
 
-from spring.main import CLIParser
+from spring.version import VERSION
 
 
 setup(
     name='spring',
-    version=CLIParser.VERSION,
+    version=VERSION,
     description='Simple Couchbase workload generator based on pylibcouchbase',
     author='Pavel Paulau',
     author_email='pavel.paulau@gmail.com',

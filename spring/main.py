@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from logger import logger
 
 from spring.settings import WorkloadSettings, TargetSettings
+from spring.version import VERSION
 from spring.wgen import WorkloadGen
 
 
@@ -11,7 +12,6 @@ class CLIParser(ArgumentParser):
     USAGE = (
         '%(prog)s [-s SIZE] [-r SET RATIO] [-i #ITEMS] [-o #OPS] [w #WORKERS] '
         '[cb://user:pass@host:port/bucket]')
-    VERSION = '1.5.1'
 
     def __init__(self):
         super(CLIParser, self).__init__(prog=self.PROG, usage=self.USAGE)
@@ -48,7 +48,7 @@ class CLIParser(ArgumentParser):
             help='number of workers (1 by default)'
         )
         self.add_argument(
-            '-v', action='version', version=self.VERSION
+            '-v', action='version', version=VERSION
         )
 
     def parse_args(self, *args):
