@@ -21,8 +21,17 @@ class WorkloadGen(object):
         random.shuffle(ops)
         return ops
 
-    def _run_workload(self, cb, ops_per_worker, rkg, dg):
-        while ops_per_worker > 0:
+    def _report_progress(self, ops_per_worker):
+        if ops_per_worker < float('inf') and \
+                self.curr_ops > self.next_report * ops_per_worker:
+            progress = 100.0 * self.curr_ops / ops_per_worker
+            self.next_report += 0.05
+            logger.info('Current progress: {0:.2f} %'.format(progress))
+
+    def _run_workload(self, cb, ops_per_worker, rkg, dg, sid):
+        self.curr_ops = 0
+        self.next_report = 0.05  # report after every 5% of completion
+        while self.curr_ops < ops_per_worker:
             for op in self._gen_rw_sequence():
                 if op:
                     key, doc = dg.next()
@@ -30,7 +39,9 @@ class WorkloadGen(object):
                 else:
                     key = rkg.next()
                     cb._do_get(key)
-            ops_per_worker -= self.BATCH_SIZE
+            self.curr_ops += self.BATCH_SIZE
+            if not sid:  # only first worker
+                self._report_progress(ops_per_worker)
 
     def _run_worker(self, sid):
         host, port = self.ts.node.split(':')
@@ -43,7 +54,7 @@ class WorkloadGen(object):
         rkg = RandKeyGen(working_set, self.ts.prefix)
         dg = DocGen(self.ws.size, offset, self.ts.prefix)
 
-        self._run_workload(cb, ops_per_worker, rkg, dg)
+        self._run_workload(cb, ops_per_worker, rkg, dg, sid)
 
     def run(self):
         workers = list()
