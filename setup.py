@@ -15,7 +15,7 @@ setup(
     },
     install_requires=[
         'argparse==1.2.1',
-        'couchbase==0.9',
+        'couchbase<=1.0.1',
         'logger==1.1'
     ]
 )

@@ -45,8 +45,8 @@ class WorkloadGen(object):
 
     def _run_worker(self, sid):
         host, port = self.ts.node.split(':')
-        cb = CBGen(host, port, self.ts.username, self.ts.password,
-                   self.ts.bucket)
+        cb = CBGen(self.ts.bucket, host, port,
+                   self.ts.username, self.ts.password)
 
         ops_per_worker = self.ws.ops / self.ws.workers
         offset = sid * ops_per_worker + self.ws.items
