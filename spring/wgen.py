@@ -1,5 +1,5 @@
 import random
-from multiprocessing import Process, Value
+from multiprocessing import Process, Value, Lock
 
 from couchbase.exceptions import ValueFormatError
 from logger import logger
@@ -31,11 +31,15 @@ class WorkloadGen(object):
             self.next_report += 0.05
             logger.info('Current progress: {0:.2f} %'.format(progress))
 
-    def _do_batch(self, curr_items, deleted_items):
+    def _do_batch(self, curr_items, deleted_items, lock):
         curr_items_tmp = curr_items.value
-        curr_items.value += self.ws.creates
         deleted_items_tmp = deleted_items.value
-        deleted_items.value += self.ws.deletes
+        if self.ws.creates:
+            with lock:
+                curr_items.value += self.ws.creates
+        if self.ws.deletes:
+            with lock:
+                deleted_items.value += self.ws.deletes
 
         for i, op in enumerate(self._gen_sequence()):
             if op == 'c':
@@ -69,9 +73,11 @@ class WorkloadGen(object):
         self.next_report = 0.05  # report after every 5% of completion
         try:
             logger.info('Started: Worker-{0}'.format(sid))
+            lock = Lock()
             while curr_ops.value < ops:
-                curr_ops.value += self.BATCH_SIZE
-                self._do_batch(curr_items, deleted_items)
+                with lock:
+                    curr_ops.value += self.BATCH_SIZE
+                self._do_batch(curr_items, deleted_items, lock)
                 if not sid:  # only first worker
                     self._report_progress(ops, curr_ops.value)
         except (KeyboardInterrupt, ValueFormatError):
