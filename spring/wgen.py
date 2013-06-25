@@ -55,9 +55,13 @@ class WorkloadGen(object):
                 self.cb.delete(key)
 
     def _run_worker(self, sid, ops, curr_ops, curr_items, deleted_items):
-        host, port = self.ts.node.split(':')
-        self.cb = CBGen(self.ts.bucket, host, port,
-                        self.ts.username, self.ts.password)
+        try:
+            host, port = self.ts.node.split(':')
+            self.cb = CBGen(self.ts.bucket, host, port,
+                            self.ts.username, self.ts.password)
+        except Exception as e:
+            raise SystemExit(e)
+
         self.key_for_removal = KeyForRemoval()
         self.existing_keys = ExistingKey(self.ws.working_set)
         self.docs = NewDocument(self.ws.size)
@@ -86,7 +90,10 @@ class WorkloadGen(object):
                 target=self._run_worker,
                 args=(sid, self.ws.ops, curr_ops, curr_items, deleted_items)
             )
+            worker.start()
             workers.append(worker)
 
-        map(lambda worker: worker.start(), workers)
-        map(lambda worker: worker.join(), workers)
+        for worker in workers:
+            worker.join()
+            if worker.exitcode:
+                logger.interrupt("Worker finished with non-zero exit code")
