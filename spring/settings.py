@@ -7,7 +7,10 @@ class WorkloadSettings(object):
 
     def __init__(self, options):
         self.size = options.size
-        self.ratio = options.ratio
+        self.creates = options.creates
+        self.reads = options.reads
+        self.updates = options.updates
+        self.deletes = options.deletes
         self.items = options.items
         self.ops = options.ops
         self.working_set = options.working_set

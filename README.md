@@ -1,7 +1,7 @@
 spring
 ======
 
-Simple Couchbase workload generator based on pylibcouchbase
+Simple Couchbase CRUD-workload generator based on pylibcouchbase
 
 Requirements:
 -------------
@@ -19,19 +19,22 @@ Usage
 -----
 
         $ spring -h
-        usage: spring [-s SIZE] [-r SET RATIO] [-i #ITEMS] [-o #OPS] [w #WORKERS] [cb://user:pass@host:port/bucket]
+        usage: spring [-crud PERCENTAGE] [-s SIZE] [-i #ITEMS] [-w WORKING SET][-o #OPS] [n #WORKERS] [cb://user:pass@host:port/bucket]
 
         positional arguments:
           URI            Connection URI
 
         optional arguments:
           -h, --help     show this help message and exit
-          -v, --version  show program's version number and exit
+          -v             show program's version number and exit
+          -c             percentage of "create" operations (100 by default)
+          -r             percentage of "read" operations (0 by default)
+          -u             percentage of "update" operations (0 by default)
+          -d             percentage of "delete" operations (0 by default)
           -s             average value size in bytes (2048 by default)
           -i             number of existing items (0 by default)
           -w             fractional ratio of working set (1.0 by default)
           -o             total number of operations (infinity by default)
-          -r             fractional ratio of set operations (1.0 by default)
           -n             number of workers (1 by default)
 
 Examples
@@ -39,20 +42,24 @@ Examples
 
 Insert 1K items:
 
-        spring -o 1000
+        spring -c 100 -o 1000
 
 Update them:
 
-        spring -o 1000
+        spring -u 100 -o 1000 -i 1000
 
 Add 1K more items:
 
-        spring -i 1000 -o 1000
+        spring -c 100 -o 1000 -i 1000
 
-Perform 1K mixed (read/write) operations:
+Perform 1K mixed (read/update) operations:
 
-        spring -r 0.5 -i 2000 -o 1000
+        spring -c 50 -u 50 -o 1000 -i 2000
 
 Infinite read loop using 8 workers:
 
-        spring -r 0.0 -i 2000 -w 8
+        spring -r 100 -i 2000 -w 8
+
+Delete 2K items:
+
+        spring -d 100 -o 2000

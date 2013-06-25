@@ -10,7 +10,8 @@ class CLIParser(ArgumentParser):
 
     PROG = 'spring'
     USAGE = (
-        '%(prog)s [-s SIZE] [-r SET RATIO] [-i #ITEMS] [-o #OPS] [w #WORKERS] '
+        '%(prog)s [-crud PERCENTAGE] [-s SIZE] [-r SET RATIO] [-i #ITEMS] '
+        '[-w WORKING SET] [-o #OPS] [w #WORKERS] '
         '[cb://user:pass@host:port/bucket]')
 
     def __init__(self):
@@ -22,6 +23,25 @@ class CLIParser(ArgumentParser):
             'uri',  metavar='URI', nargs='?',
             default='couchbase://127.0.0.1:8091/default',
             help='Connection URI'
+        )
+        self.add_argument(
+            '-v', '--version', action='version', version=VERSION
+        )
+        self.add_argument(
+            '-c', dest='creates', type=int, default=0, metavar='',
+            help='percentage of "create" operations (0 by default)',
+        )
+        self.add_argument(
+            '-r', dest='reads', type=int, default=0, metavar='',
+            help='percentage of "read" operations (0 by default)',
+        )
+        self.add_argument(
+            '-u', dest='updates', type=int, default=0, metavar='',
+            help='percentage of "update" operations (0 by default)',
+        )
+        self.add_argument(
+            '-d', dest='deletes', type=int, default=0, metavar='',
+            help='percentage of "delete" operations (0 by default)',
         )
         self.add_argument(
             '-s', dest='size', type=int, default=2048, metavar='',
@@ -40,28 +60,23 @@ class CLIParser(ArgumentParser):
             help='total number of operations (infinity by default)'
         )
         self.add_argument(
-            '-r', dest='ratio', type=float, default=1.0, metavar='',
-            help='fractional ratio of set operations (1.0 by default)',
-        )
-        self.add_argument(
             '-n', dest='workers', type=int, default=1, metavar='',
             help='number of workers (1 by default)'
-        )
-        self.add_argument(
-            '-v', action='version', version=VERSION
         )
 
     def parse_args(self, *args):
         args = super(CLIParser, self).parse_args()
 
-        if not 0 <= args.ratio <= 1 or not 0 <= args.working_set <= 1:
-            self.error('Invalid ratio. Allowed range is [0.0, 1.0].')
+        percentages = [args.creates, args.reads, args.updates, args.deletes]
+        if filter(lambda p: not 0 <= p <= 100, percentages) or \
+                sum(percentages) != 100:
+            self.error('Invalid operation percentage')
 
-        if args.ops == float('inf') and args.ratio:
-            self.error('Infinite loop allowed only for read-only workloads')
+        if not 0 <= args.working_set <= 1:
+            self.error('Invalid working set. Allowed range is [0.0, 1.0].')
 
-        if args.ratio < 1 and not args.items:
-            self.error('Trying to read indefinite dataset. '
+        if (args.reads or args.updates) and not args.items:
+            self.error('Trying to read/update indefinite dataset. '
                        'Please specify number of items in dataset (-i)')
 
         return args

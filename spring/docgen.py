@@ -11,8 +11,15 @@ class Iterator(object):
 
 class ExistingKey(Iterator):
 
-    def next(self, curr_items):
-        key = 'key-{0}'.format(random.randint(1, curr_items))
+    def next(self, curr_items, curr_deletes):
+        key = 'key-{0}'.format(random.randint(1 + curr_deletes, curr_items))
+        return key
+
+
+class KeyForRemoval(Iterator):
+
+    def next(self, curr_deletes):
+        key = 'key-{0}'.format(curr_deletes)
         return key
 
 
@@ -73,10 +80,11 @@ class NewDocument(Iterator):
         body = num_slices * alphabet
         return body[:length_int]
 
-    def next(self, curr_items):
+    def next(self, curr_items, key=None):
         next_length = self._get_variation_coeff() * self.avg_size
 
-        key = 'key-{0}'.format(curr_items)
+        if key is None:
+            key = 'key-{0}'.format(curr_items)
         alphabet = self._build_alphabet(key)
         doc = {
             'name': self._build_name(alphabet),

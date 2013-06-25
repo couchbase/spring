@@ -5,7 +5,7 @@ from couchbase.exceptions import ValueFormatError
 from logger import logger
 
 from spring.cbgen import CBGen
-from spring.docgen import ExistingKey, NewDocument
+from spring.docgen import ExistingKey, KeyForRemoval, NewDocument
 
 
 class WorkloadGen(object):
@@ -17,11 +17,13 @@ class WorkloadGen(object):
         self.ts = target_settings
 
     def _gen_sequence(self):
-        num_creates = int(self.ws.ratio * self.BATCH_SIZE)
-        num_reads = int((1 - self.ws.ratio) * self.BATCH_SIZE)
-        ops = ['c'] * num_creates + ['r'] * num_reads
+        ops = \
+            ['c'] * self.ws.creates + \
+            ['r'] * self.ws.reads + \
+            ['u'] * self.ws.updates + \
+            ['d'] * self.ws.deletes
         random.shuffle(ops)
-        return ops, num_creates, num_reads
+        return ops
 
     def _report_progress(self, ops, curr_ops):
         if ops < float('inf') and curr_ops > self.next_report * ops:
@@ -29,32 +31,43 @@ class WorkloadGen(object):
             self.next_report += 0.05
             logger.info('Current progress: {0:.2f} %'.format(progress))
 
-    def _do_batch(self, curr_items):
+    def _do_batch(self, curr_items, deleted_items):
         curr_items_tmp = curr_items.value
-        seq, num_creates, _ = self._gen_sequence()
-        curr_items.value += num_creates
-        for i, op in enumerate(seq):
+        curr_items.value += self.ws.creates
+        deleted_items_tmp = deleted_items.value
+        deleted_items.value += self.ws.deletes
+
+        for i, op in enumerate(self._gen_sequence()):
             if op == 'c':
                 curr_items_tmp += 1
                 key, doc = self.docs.next(curr_items_tmp)
-                self.cb._do_set(key, doc)
+                self.cb.create(key, doc)
             elif op == 'r':
-                key = self.existing_keys.next(curr_items_tmp)
-                self.cb._do_get(key)
+                key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
+                self.cb.read(key)
+            elif op == 'u':
+                key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
+                key, doc = self.docs.next(curr_items_tmp, key)
+                self.cb.update(key, doc)
+            elif op == 'd':
+                deleted_items_tmp += 1
+                key = self.key_for_removal.next(deleted_items_tmp)
+                self.cb.delete(key)
 
-    def _run_worker(self, sid, ops, curr_ops, curr_items):
+    def _run_worker(self, sid, ops, curr_ops, curr_items, deleted_items):
         host, port = self.ts.node.split(':')
         self.cb = CBGen(self.ts.bucket, host, port,
                         self.ts.username, self.ts.password)
+        self.key_for_removal = KeyForRemoval()
         self.existing_keys = ExistingKey()
         self.docs = NewDocument(self.ws.size)
 
-        self.next_report = 0.05  # recurr_opsport after every 5% of completion
+        self.next_report = 0.05  # report after every 5% of completion
         try:
             logger.info('Started: Worker-{0}'.format(sid))
             while curr_ops.value < ops:
                 curr_ops.value += self.BATCH_SIZE
-                self._do_batch(curr_items)
+                self._do_batch(curr_items, deleted_items)
                 if not sid:  # only first worker
                     self._report_progress(ops, curr_ops.value)
         except (KeyboardInterrupt, ValueFormatError):
@@ -65,11 +78,14 @@ class WorkloadGen(object):
     def run(self):
         workers = list()
         curr_items = Value('i', self.ws.items)
+        deleted_items = Value('i', 0)
         curr_ops = Value('i', 0)
 
         for sid in range(self.ws.workers):
-            worker = Process(target=self._run_worker,
-                             args=(sid, self.ws.ops, curr_ops, curr_items))
+            worker = Process(
+                target=self._run_worker,
+                args=(sid, self.ws.ops, curr_ops, curr_items, deleted_items)
+            )
             workers.append(worker)
 
         map(lambda worker: worker.start(), workers)
