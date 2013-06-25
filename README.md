@@ -19,7 +19,7 @@ Usage
 -----
 
         $ spring -h
-        usage: spring [-crud PERCENTAGE] [-s SIZE] [-i #ITEMS] [-w WORKING SET] [-o #OPS] [n #WORKERS] [cb://user:pass@host:port/bucket]
+        usage: spring [-crud PERCENTAGE] [-o #OPS] [-i #ITEMS] [-n #WORKERS] [cb://user:pass@host:port/bucket]
 
         positional arguments:
           URI            Connection URI
@@ -31,10 +31,10 @@ Usage
           -r             percentage of "read" operations (0 by default)
           -u             percentage of "update" operations (0 by default)
           -d             percentage of "delete" operations (0 by default)
+          -o             total number of operations (infinity by default)
           -s             average value size in bytes (2048 by default)
           -i             number of existing items (0 by default)
           -w             fractional ratio of working set (1.0 by default)
-          -o             total number of operations (infinity by default)
           -n             number of workers (1 by default)
 
 Examples

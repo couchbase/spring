@@ -10,8 +10,7 @@ class CLIParser(ArgumentParser):
 
     PROG = 'spring'
     USAGE = (
-        '%(prog)s [-crud PERCENTAGE] [-s SIZE] [-r SET RATIO] [-i #ITEMS] '
-        '[-w WORKING SET] [-o #OPS] [w #WORKERS] '
+        '%(prog)s [-crud PERCENTAGE] [-o #OPS] [-i #ITEMS] [-n #WORKERS] '
         '[cb://user:pass@host:port/bucket]')
 
     def __init__(self):
@@ -44,6 +43,10 @@ class CLIParser(ArgumentParser):
             help='percentage of "delete" operations (0 by default)',
         )
         self.add_argument(
+            '-o', dest='ops', type=int, default=float('inf'), metavar='',
+            help='total number of operations (infinity by default)'
+        )
+        self.add_argument(
             '-s', dest='size', type=int, default=2048, metavar='',
             help='average value size in bytes (2048 by default)'
         )
@@ -54,10 +57,6 @@ class CLIParser(ArgumentParser):
         self.add_argument(
             '-w', dest='working_set', type=float, default=1, metavar='',
             help='fractional ratio of working set (1.0 by default)'
-        )
-        self.add_argument(
-            '-o', dest='ops', type=int, default=float('inf'), metavar='',
-            help='total number of operations (infinity by default)'
         )
         self.add_argument(
             '-n', dest='workers', type=int, default=1, metavar='',
