@@ -19,7 +19,7 @@ Usage
 -----
 
         $ spring -h
-        usage: spring [-crud PERCENTAGE] [-s SIZE] [-i #ITEMS] [-w WORKING SET][-o #OPS] [n #WORKERS] [cb://user:pass@host:port/bucket]
+        usage: spring [-crud PERCENTAGE] [-s SIZE] [-i #ITEMS] [-w WORKING SET] [-o #OPS] [n #WORKERS] [cb://user:pass@host:port/bucket]
 
         positional arguments:
           URI            Connection URI

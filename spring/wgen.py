@@ -59,7 +59,7 @@ class WorkloadGen(object):
         self.cb = CBGen(self.ts.bucket, host, port,
                         self.ts.username, self.ts.password)
         self.key_for_removal = KeyForRemoval()
-        self.existing_keys = ExistingKey()
+        self.existing_keys = ExistingKey(self.ws.working_set)
         self.docs = NewDocument(self.ws.size)
 
         self.next_report = 0.05  # report after every 5% of completion

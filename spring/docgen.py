@@ -11,8 +11,12 @@ class Iterator(object):
 
 class ExistingKey(Iterator):
 
+    def __init__(self, working_set):
+        self.working_set = working_set
+
     def next(self, curr_items, curr_deletes):
-        key = 'key-{0}'.format(random.randint(1 + curr_deletes, curr_items))
+        offset = 1 + curr_deletes + int((1 - self.working_set) * curr_items)
+        key = 'key-{0}'.format(random.randint(offset, curr_items))
         return key
 
 
