@@ -80,4 +80,4 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        logger.info('Finished workload')
+        pass

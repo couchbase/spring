@@ -1,10 +1,11 @@
 import random
-from multiprocessing import Process
+from multiprocessing import Process, Value
 
+from couchbase.exceptions import ValueFormatError
 from logger import logger
 
 from spring.cbgen import CBGen
-from spring.docgen import RandKeyGen, DocGen
+from spring.docgen import ExistingKey, NewDocument
 
 
 class WorkloadGen(object):
@@ -15,57 +16,61 @@ class WorkloadGen(object):
         self.ws = workload_settings
         self.ts = target_settings
 
-    def _gen_rw_sequence(self):
-        ops = int(self.ws.ratio * self.BATCH_SIZE) * [1] + \
-            int((1 - self.ws.ratio) * self.BATCH_SIZE) * [0]
+    def _gen_sequence(self):
+        num_creates = int(self.ws.ratio * self.BATCH_SIZE)
+        num_reads = int((1 - self.ws.ratio) * self.BATCH_SIZE)
+        ops = ['c'] * num_creates + ['r'] * num_reads
         random.shuffle(ops)
-        return ops
+        return ops, num_creates, num_reads
 
-    def _report_progress(self, ops_per_worker):
-        if ops_per_worker < float('inf') and \
-                self.curr_ops > self.next_report * ops_per_worker:
-            progress = 100.0 * self.curr_ops / ops_per_worker
+    def _report_progress(self, ops, curr_ops):
+        if ops < float('inf') and curr_ops > self.next_report * ops:
+            progress = 100.0 * curr_ops / ops
             self.next_report += 0.05
             logger.info('Current progress: {0:.2f} %'.format(progress))
 
-    def _run_workload(self, cb, ops_per_worker, rkg, dg, sid):
-        self.curr_ops = 0
-        self.next_report = 0.05  # report after every 5% of completion
-        while self.curr_ops < ops_per_worker:
-            for op in self._gen_rw_sequence():
-                if op:
-                    key, doc = dg.next()
-                    cb._do_set(key, doc)
-                else:
-                    key = rkg.next()
-                    cb._do_get(key)
-            self.curr_ops += self.BATCH_SIZE
-            if not sid:  # only first worker
-                self._report_progress(ops_per_worker)
+    def _do_batch(self, curr_items):
+        curr_items_tmp = curr_items.value
+        seq, num_creates, _ = self._gen_sequence()
+        curr_items.value += num_creates
+        for i, op in enumerate(seq):
+            if op == 'c':
+                curr_items_tmp += 1
+                key, doc = self.docs.next(curr_items_tmp)
+                self.cb._do_set(key, doc)
+            elif op == 'r':
+                key = self.existing_keys.next(curr_items_tmp)
+                self.cb._do_get(key)
 
-    def _run_worker(self, sid):
+    def _run_worker(self, sid, ops, curr_ops, curr_items):
         host, port = self.ts.node.split(':')
-        cb = CBGen(self.ts.bucket, host, port,
-                   self.ts.username, self.ts.password)
+        self.cb = CBGen(self.ts.bucket, host, port,
+                        self.ts.username, self.ts.password)
+        self.existing_keys = ExistingKey()
+        self.docs = NewDocument(self.ws.size)
 
-        ops_per_worker = self.ws.ops / self.ws.workers
-        offset = sid * ops_per_worker + self.ws.items
-        working_set = int(self.ws.working_set * self.ws.items)
-        rkg = RandKeyGen(working_set, self.ts.prefix)
-        dg = DocGen(self.ws.size, offset, self.ts.prefix)
-
-        self._run_workload(cb, ops_per_worker, rkg, dg, sid)
+        self.next_report = 0.05  # recurr_opsport after every 5% of completion
+        try:
+            logger.info('Started: Worker-{0}'.format(sid))
+            while curr_ops.value < ops:
+                curr_ops.value += self.BATCH_SIZE
+                self._do_batch(curr_items)
+                if not sid:  # only first worker
+                    self._report_progress(ops, curr_ops.value)
+        except (KeyboardInterrupt, ValueFormatError):
+            logger.info('Interrupted: Worker-{0}'.format(sid))
+        else:
+            logger.info('Finished: Worker-{0}'.format(sid))
 
     def run(self):
         workers = list()
-        for sid in range(self.ws.workers):
-            worker = Process(target=self._run_worker, args=(sid,))
-            worker.name = 'Worker-{0}'.format(sid)
-            worker.daemon = False
-            worker.start()
-            workers.append(worker)
-            logger.info('Started {0}'.format(worker.name))
+        curr_items = Value('i', self.ws.items)
+        curr_ops = Value('i', 0)
 
-        for worker in workers:
-            worker.join()
-            logger.info('Stopped {0}'.format(worker.name))
+        for sid in range(self.ws.workers):
+            worker = Process(target=self._run_worker,
+                             args=(sid, self.ws.ops, curr_ops, curr_items))
+            workers.append(worker)
+
+        map(lambda worker: worker.start(), workers)
+        map(lambda worker: worker.join(), workers)

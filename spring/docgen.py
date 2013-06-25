@@ -9,28 +9,20 @@ class Iterator(object):
         return self
 
 
-class RandKeyGen(Iterator):
+class ExistingKey(Iterator):
 
-    def __init__(self, items, prefix=None):
-        self.items = items
-        self.prefix = prefix
-
-    def next(self):
-        key = 'key-{0}'.format(random.randint(1, self.items))
-        if self.prefix is not None:
-            key = self.prefix + key
+    def next(self, curr_items):
+        key = 'key-{0}'.format(random.randint(1, curr_items))
         return key
 
 
-class DocGen(Iterator):
+class NewDocument(Iterator):
 
     SIZE_VARIATION = 0.25  # 25%
     KEY_LENGTH = 10
 
-    def __init__(self, avg_size, offset, prefix=None):
+    def __init__(self, avg_size):
         self.avg_size = avg_size
-        self.offset = offset
-        self.prefix = prefix
 
     @classmethod
     def _get_variation_coeff(cls):
@@ -81,11 +73,10 @@ class DocGen(Iterator):
         body = num_slices * alphabet
         return body[:length_int]
 
-    def next(self):
+    def next(self, curr_items):
         next_length = self._get_variation_coeff() * self.avg_size
-        self.offset += 1
 
-        key = 'key-{0}'.format(self.offset)
+        key = 'key-{0}'.format(curr_items)
         alphabet = self._build_alphabet(key)
         doc = {
             'name': self._build_name(alphabet),
@@ -97,7 +88,4 @@ class DocGen(Iterator):
             'achievements': self._build_achievements(alphabet),
             'body': self._build_body(alphabet, next_length)
         }
-        if self.prefix is not None:
-            key = self.prefix + key
-
         return key, doc
