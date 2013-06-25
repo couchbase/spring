@@ -44,9 +44,10 @@ class WorkloadGen(object):
         random.shuffle(ops)
         return ops
 
-    def _report_progress(self, ops, curr_ops):
-        if ops < float('inf') and curr_ops > self.next_report * ops:
-            progress = 100.0 * curr_ops / ops
+    def _report_progress(self, curr_ops):
+        if self.ws.ops < float('inf') and \
+                curr_ops > self.next_report * self.ws.ops:
+            progress = 100.0 * curr_ops / self.ws.ops
             self.next_report += 0.05
             logger.info('Current progress: {0:.2f} %'.format(progress))
 
@@ -78,7 +79,7 @@ class WorkloadGen(object):
                 key = self.key_for_removal.next(deleted_items_tmp)
                 self.cb.delete(key)
 
-    def _run_worker(self, sid, ops, curr_ops, curr_items, deleted_items):
+    def _run_worker(self, sid, lock, curr_ops, curr_items, deleted_items):
         try:
             host, port = self.ts.node.split(':')
             self.cb = CBGen(self.ts.bucket, host, port,
@@ -97,9 +98,8 @@ class WorkloadGen(object):
         else:
             target_time = None
         try:
-            logger.info('Started: Worker-{0}'.format(sid))
-            lock = Lock()
-            while curr_ops.value < ops:
+            logger.info('Started: worker-{0}'.format(sid))
+            while curr_ops.value < self.ws.ops:
                 with lock:
                     curr_ops.value += self.BATCH_SIZE
 
@@ -107,26 +107,27 @@ class WorkloadGen(object):
                                target_time=target_time)
 
                 if not sid:  # only first worker
-                    self._report_progress(ops, curr_ops.value)
+                    self._report_progress(curr_ops.value)
 
                 if self.shutdown_event is not None and \
                         self.shutdown_event.is_set():
                     break
         except (KeyboardInterrupt, ValueFormatError):
-            logger.info('Interrupted: Worker-{0}'.format(sid))
+            logger.info('Interrupted: worker-{0}'.format(sid))
         else:
-            logger.info('Finished: Worker-{0}'.format(sid))
+            logger.info('Finished: worker-{0}'.format(sid))
 
     def run(self):
         workers = list()
         curr_items = Value('i', self.ws.items)
         deleted_items = Value('i', 0)
         curr_ops = Value('i', 0)
+        lock = Lock()
 
         for sid in range(self.ws.workers):
             worker = Process(
                 target=self._run_worker,
-                args=(sid, self.ws.ops, curr_ops, curr_items, deleted_items)
+                args=(sid, lock, curr_ops, curr_items, deleted_items)
             )
             worker.start()
             workers.append(worker)
