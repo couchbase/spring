@@ -30,9 +30,10 @@ class WorkloadGen(object):
 
     BATCH_SIZE = 100
 
-    def __init__(self, workload_settings, target_settings):
+    def __init__(self, workload_settings, target_settings, shutdown_event=None):
         self.ws = workload_settings
         self.ts = target_settings
+        self.shutdown_event = shutdown_event
 
     def _gen_sequence(self):
         ops = \
@@ -107,6 +108,10 @@ class WorkloadGen(object):
 
                 if not sid:  # only first worker
                     self._report_progress(ops, curr_ops.value)
+
+                if self.shutdown_event is not None and \
+                        self.shutdown_event.is_set():
+                    break
         except (KeyboardInterrupt, ValueFormatError):
             logger.info('Interrupted: Worker-{0}'.format(sid))
         else:
