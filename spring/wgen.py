@@ -6,7 +6,7 @@ from couchbase.exceptions import ValueFormatError
 from logger import logger
 
 from spring.cbgen import CBGen
-from spring.docgen import ExistingKey, KeyForRemoval, NewDocument
+from spring.docgen import ExistingKey, KeyForRemoval, NewKey, NewDocument
 
 
 def with_sleep(method):
@@ -65,18 +65,19 @@ class WorkloadGen(object):
         for i, op in enumerate(self._gen_sequence()):
             if op == 'c':
                 curr_items_tmp += 1
-                key, doc = self.docs.next(curr_items_tmp)
+                key = self.new_keys.next(curr_items_tmp)
+                doc = self.docs.next(key)
                 self.cb.create(key, doc)
             elif op == 'r':
                 key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
                 self.cb.read(key)
             elif op == 'u':
                 key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
-                key, doc = self.docs.next(curr_items_tmp, key)
+                doc = self.docs.next(key)
                 self.cb.update(key, doc)
             elif op == 'd':
                 deleted_items_tmp += 1
-                key = self.key_for_removal.next(deleted_items_tmp)
+                key = self.keys_for_removal.next(deleted_items_tmp)
                 self.cb.delete(key)
 
     def _run_worker(self, sid, lock, curr_ops, curr_items, deleted_items):
@@ -87,8 +88,9 @@ class WorkloadGen(object):
         except Exception as e:
             raise SystemExit(e)
 
-        self.key_for_removal = KeyForRemoval()
-        self.existing_keys = ExistingKey(self.ws.working_set)
+        self.existing_keys = ExistingKey(self.ws.working_set, self.ts.prefix)
+        self.new_keys = NewKey(self.ts.prefix)
+        self.keys_for_removal = KeyForRemoval(self.ts.prefix)
         self.docs = NewDocument(self.ws.size)
 
         self.next_report = 0.05  # report after every 5% of completion

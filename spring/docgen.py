@@ -3,6 +3,15 @@ import random
 from hashlib import md5
 
 
+def with_prefix(method):
+    def wrapper(self, *args, **kwargs):
+        key = method(self, *args, **kwargs)
+        if self.prefix is not None:
+            key = '{0}-{1}'.format(self.prefix, key)
+        return key
+    return wrapper
+
+
 class Iterator(object):
 
     def __iter__(self):
@@ -11,17 +20,31 @@ class Iterator(object):
 
 class ExistingKey(Iterator):
 
-    def __init__(self, working_set):
+    def __init__(self, working_set, prefix=None):
         self.working_set = working_set
+        self.prefix = prefix
 
+    @with_prefix
     def next(self, curr_items, curr_deletes):
         offset = 1 + curr_deletes + int((1 - self.working_set) * curr_items)
         key = 'key-{0}'.format(random.randint(offset, curr_items))
         return key
 
 
-class KeyForRemoval(Iterator):
+class NewKey(Iterator):
 
+    def __init__(self, prefix=None):
+        self.prefix = prefix
+
+    @with_prefix
+    def next(self, curr_items):
+        key = 'key-{0}'.format(curr_items)
+        return key
+
+
+class KeyForRemoval(NewKey):
+
+    @with_prefix
     def next(self, curr_deletes):
         key = 'key-{0}'.format(curr_deletes)
         return key
@@ -84,11 +107,8 @@ class NewDocument(Iterator):
         body = num_slices * alphabet
         return body[:length_int]
 
-    def next(self, curr_items, key=None):
+    def next(self, key):
         next_length = self._get_variation_coeff() * self.avg_size
-
-        if key is None:
-            key = 'key-{0}'.format(curr_items)
         alphabet = self._build_alphabet(key)
         doc = {
             'name': self._build_name(alphabet),
@@ -100,4 +120,4 @@ class NewDocument(Iterator):
             'achievements': self._build_achievements(alphabet),
             'body': self._build_body(alphabet, next_length)
         }
-        return key, doc
+        return doc
