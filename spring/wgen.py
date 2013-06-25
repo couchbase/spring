@@ -134,4 +134,4 @@ class WorkloadGen(object):
         for worker in workers:
             worker.join()
             if worker.exitcode:
-                logger.interrupt("Worker finished with non-zero exit code")
+                logger.interrupt('Worker finished with non-zero exit code')
