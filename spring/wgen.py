@@ -1,4 +1,5 @@
 import random
+import time
 from multiprocessing import Process, Value, Lock
 
 from couchbase.exceptions import ValueFormatError
@@ -6,6 +7,23 @@ from logger import logger
 
 from spring.cbgen import CBGen
 from spring.docgen import ExistingKey, KeyForRemoval, NewDocument
+
+
+def with_sleep(method):
+
+    CORRECTION_FACTOR = 0.975  # empiric!
+
+    def wrapper(self, *args, **kwargs):
+        target_time = kwargs['target_time']
+        if target_time is None:
+            return method(self, *args, **kwargs)
+        else:
+            t0 = time.time()
+            method(self, *args, **kwargs)
+            actual_time = time.time() - t0
+            if actual_time < target_time:
+                time.sleep(CORRECTION_FACTOR * (target_time - actual_time))
+    return wrapper
 
 
 class WorkloadGen(object):
@@ -31,7 +49,8 @@ class WorkloadGen(object):
             self.next_report += 0.05
             logger.info('Current progress: {0:.2f} %'.format(progress))
 
-    def _do_batch(self, curr_items, deleted_items, lock):
+    @with_sleep
+    def _do_batch(self, curr_items, deleted_items, lock, target_time):
         curr_items_tmp = curr_items.value
         deleted_items_tmp = deleted_items.value
         if self.ws.creates:
@@ -71,13 +90,21 @@ class WorkloadGen(object):
         self.docs = NewDocument(self.ws.size)
 
         self.next_report = 0.05  # report after every 5% of completion
+        if self.ws.throughput < float('inf'):
+            target_time = float(self.BATCH_SIZE) * self.ws.workers / \
+                self.ws.throughput
+        else:
+            target_time = None
         try:
             logger.info('Started: Worker-{0}'.format(sid))
             lock = Lock()
             while curr_ops.value < ops:
                 with lock:
                     curr_ops.value += self.BATCH_SIZE
-                self._do_batch(curr_items, deleted_items, lock)
+
+                self._do_batch(curr_items, deleted_items, lock,
+                               target_time=target_time)
+
                 if not sid:  # only first worker
                     self._report_progress(ops, curr_ops.value)
         except (KeyboardInterrupt, ValueFormatError):

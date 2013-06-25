@@ -47,6 +47,10 @@ class CLIParser(ArgumentParser):
             help='total number of operations (infinity by default)'
         )
         self.add_argument(
+            '-t', dest='throughput', type=int, default=float('inf'), metavar='',
+            help='target operations throughput (infinity by default)'
+        )
+        self.add_argument(
             '-s', dest='size', type=int, default=2048, metavar='',
             help='average value size in bytes (2048 by default)'
         )

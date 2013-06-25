@@ -32,6 +32,7 @@ Usage
           -u             percentage of "update" operations (0 by default)
           -d             percentage of "delete" operations (0 by default)
           -o             total number of operations (infinity by default)
+          -t             target operations throughput (infinity by default)
           -s             average value size in bytes (2048 by default)
           -i             number of existing items (0 by default)
           -w             fractional ratio of working set (1.0 by default)

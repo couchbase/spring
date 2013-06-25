@@ -6,14 +6,17 @@ from logger import logger
 class WorkloadSettings(object):
 
     def __init__(self, options):
-        self.size = options.size
         self.creates = options.creates
         self.reads = options.reads
         self.updates = options.updates
         self.deletes = options.deletes
-        self.items = options.items
         self.ops = options.ops
+        self.throughput = options.throughput
+
+        self.size = options.size
+        self.items = options.items
         self.working_set = options.working_set
+
         self.workers = options.workers
 
 
