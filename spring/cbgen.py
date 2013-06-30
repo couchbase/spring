@@ -1,4 +1,5 @@
 from couchbase import Couchbase
+from couchbase.exceptions import NotFoundError
 
 
 class CBGen(object):
@@ -16,4 +17,7 @@ class CBGen(object):
         self.client.set(key, doc)
 
     def delete(self, key):
-        self.client.delete(key)
+        try:
+            self.client.delete(key)
+        except NotFoundError:
+            pass
