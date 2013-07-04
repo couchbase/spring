@@ -88,7 +88,9 @@ class WorkloadGen(object):
         except Exception as e:
             raise SystemExit(e)
 
-        self.existing_keys = ExistingKey(self.ws.working_set, self.ts.prefix)
+        self.existing_keys = ExistingKey(self.ws.working_set,
+                                         self.ws.working_set_access,
+                                         self.ts.prefix)
         self.new_keys = NewKey(self.ts.prefix)
         self.keys_for_removal = KeyForRemoval(self.ts.prefix)
         self.docs = NewDocument(self.ws.size)

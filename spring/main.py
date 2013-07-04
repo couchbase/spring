@@ -60,7 +60,11 @@ class CLIParser(ArgumentParser):
         )
         self.add_argument(
             '-w', dest='working_set', type=int, default=100, metavar='',
-            help='percentage of "hot" items in dataset, 100 by default'
+            help='percentage of items in working set, 100 by default'
+        )
+        self.add_argument(
+            '-W', dest='working_set_access', type=int, default=100, metavar='',
+            help='percentage of operations that hit working set, 100 by default'
         )
         self.add_argument(
             '-n', dest='workers', type=int, default=1, metavar='',
@@ -73,10 +77,13 @@ class CLIParser(ArgumentParser):
         percentages = [args.creates, args.reads, args.updates, args.deletes]
         if filter(lambda p: not 0 <= p <= 100, percentages) or \
                 sum(percentages) != 100:
-            self.error('Invalid operation percentage')
+            self.error('Invalid operation [-c, -r, -u, -d] percentage')
 
         if not 0 <= args.working_set <= 100:
-            self.error('Invalid working set. Allowed range is [0, 100].')
+            self.error('Invalid working set [-w] percentage.')
+
+        if not 0 <= args.working_set_access <= 100:
+            self.error('Invalid access percentage [-W].')
 
         if (args.reads or args.updates) and not args.items:
             self.error('Trying to read/update indefinite dataset. '

@@ -20,16 +20,21 @@ class Iterator(object):
 
 class ExistingKey(Iterator):
 
-    def __init__(self, working_set, prefix=None):
+    def __init__(self, working_set, working_set_access, prefix=None):
         self.working_set = working_set
+        self.working_set_access = working_set_access
         self.prefix = prefix
 
     @with_prefix
     def next(self, curr_items, curr_deletes):
-        offset = 1 + curr_deletes + \
-            int((100 - self.working_set) / 100.0 * curr_items)
-        key = 'key-{0}'.format(random.randint(offset, curr_items))
-        return key
+        if random.randint(0, 100) <= self.working_set_access:
+            left_border = 1 + curr_deletes + \
+                int((100 - self.working_set) / 100.0 * curr_items)
+            right_border = curr_items
+        else:
+            left_border = 1 + curr_deletes
+            right_border = int((100 - self.working_set) / 100.0 * curr_items)
+        return 'key-{0}'.format(random.randint(left_border, right_border))
 
 
 class NewKey(Iterator):

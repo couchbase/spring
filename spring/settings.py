@@ -16,6 +16,7 @@ class WorkloadSettings(object):
         self.size = options.size
         self.items = options.items
         self.working_set = options.working_set
+        self.working_set_access = options.working_set_access
 
         self.workers = options.workers
 
