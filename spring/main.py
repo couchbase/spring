@@ -59,8 +59,8 @@ class CLIParser(ArgumentParser):
             help='number of existing items (0 by default)',
         )
         self.add_argument(
-            '-w', dest='working_set', type=float, default=1, metavar='',
-            help='fractional ratio of working set (1.0 by default)'
+            '-w', dest='working_set', type=int, default=100, metavar='',
+            help='percentage of "hot" items in dataset, 100 by default'
         )
         self.add_argument(
             '-n', dest='workers', type=int, default=1, metavar='',
@@ -75,8 +75,8 @@ class CLIParser(ArgumentParser):
                 sum(percentages) != 100:
             self.error('Invalid operation percentage')
 
-        if not 0 <= args.working_set <= 1:
-            self.error('Invalid working set. Allowed range is [0.0, 1.0].')
+        if not 0 <= args.working_set <= 100:
+            self.error('Invalid working set. Allowed range is [0, 100].')
 
         if (args.reads or args.updates) and not args.items:
             self.error('Trying to read/update indefinite dataset. '

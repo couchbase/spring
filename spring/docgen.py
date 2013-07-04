@@ -26,7 +26,8 @@ class ExistingKey(Iterator):
 
     @with_prefix
     def next(self, curr_items, curr_deletes):
-        offset = 1 + curr_deletes + int((1 - self.working_set) * curr_items)
+        offset = 1 + curr_deletes + \
+            int((100 - self.working_set) / 100.0 * curr_items)
         key = 'key-{0}'.format(random.randint(offset, curr_items))
         return key
 
