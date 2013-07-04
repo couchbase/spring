@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from logger import logger
+
 
 from spring.settings import WorkloadSettings, TargetSettings
 from spring.version import VERSION
