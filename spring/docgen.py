@@ -27,14 +27,37 @@ class ExistingKey(Iterator):
 
     @with_prefix
     def next(self, curr_items, curr_deletes):
+        num_hot_keys = curr_items * self.working_set / 100.0
+        num_cold_items = curr_items - num_hot_keys
+
+        left_limit = 1 + curr_deletes
         if random.randint(0, 100) <= self.working_set_access:
-            left_border = 1 + curr_deletes + \
-                int((100 - self.working_set) / 100.0 * curr_items)
-            right_border = curr_items
+            left_limit += num_cold_items
+            right_limit = curr_items
         else:
-            left_border = 1 + curr_deletes
-            right_border = int((100 - self.working_set) / 100.0 * curr_items)
-        return 'key-{0}'.format(random.randint(left_border, right_border))
+            right_limit = num_cold_items
+        return 'key-{0}'.format(random.randint(left_limit, right_limit))
+
+
+class SequentialHotKey(object):
+
+    def __init__(self, sid, ws, prefix):
+        self.sid = sid
+        self.ws = ws
+        self.prefix = prefix
+
+    def __iter__(self):
+        num_hot_keys = self.ws.items * self.ws.working_set / 100.0
+        num_cold_items = self.ws.items - num_hot_keys
+        keys_per_worker = num_hot_keys / self.ws.workers
+        left_limit = 1 + num_cold_items + self.sid * keys_per_worker
+        right_limit = self.ws.items
+
+        for seq_id in range(left_limit, right_limit):
+            key = 'key-{0}'.format(seq_id)
+            if self.prefix is not None:
+                key = '{0}-{1}'.format(self.prefix, key)
+            yield key
 
 
 class NewKey(Iterator):

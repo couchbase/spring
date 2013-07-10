@@ -95,6 +95,7 @@ class CLIParser(ArgumentParser):
 def main():
     parser = CLIParser()
     args = parser.parse_args()
+    args.seq_reads = False
 
     ws = WorkloadSettings(args)
     ts = TargetSettings(args.uri)

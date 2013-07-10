@@ -10,6 +10,7 @@ class WorkloadSettings(object):
         self.reads = options.reads
         self.updates = options.updates
         self.deletes = options.deletes
+
         self.ops = options.ops
         self.throughput = options.throughput
 
@@ -19,6 +20,8 @@ class WorkloadSettings(object):
         self.working_set_access = options.working_set_access
 
         self.workers = options.workers
+
+        self.seq_reads = options.seq_reads
 
 
 class TargetSettings(object):

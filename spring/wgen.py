@@ -6,7 +6,8 @@ from couchbase.exceptions import ValueFormatError
 from logger import logger
 
 from spring.cbgen import CBGen
-from spring.docgen import ExistingKey, KeyForRemoval, NewKey, NewDocument
+from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
+                           NewKey, NewDocument)
 
 
 def with_sleep(method):
@@ -80,7 +81,7 @@ class WorkloadGen(object):
                 key = self.keys_for_removal.next(deleted_items_tmp)
                 self.cb.delete(key)
 
-    def _run_worker(self, sid, lock, curr_ops, curr_items, deleted_items):
+    def _run_worker(self, sid, *args):
         try:
             host, port = self.ts.node.split(':')
             self.cb = CBGen(self.ts.bucket, host, port,
@@ -88,6 +89,16 @@ class WorkloadGen(object):
         except Exception as e:
             raise SystemExit(e)
 
+        if self.ws.seq_reads:
+            self._do_seq_reads(sid)
+        else:
+            self._run_workload(sid, *args)
+
+    def _do_seq_reads(self, sid):
+        for key in SequentialHotKey(sid, self.ws, self.ts.prefix):
+            self.cb.read(key)
+
+    def _run_workload(self, sid, lock, curr_ops, curr_items, deleted_items):
         self.existing_keys = ExistingKey(self.ws.working_set,
                                          self.ws.working_set_access,
                                          self.ts.prefix)
