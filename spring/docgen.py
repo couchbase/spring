@@ -29,7 +29,7 @@ class ExistingKey(Iterator):
     def next(self, curr_items, curr_deletes):
         num_existing_items = curr_items - curr_deletes
         num_hot_items = int(num_existing_items * self.working_set / 100.0)
-        num_cold_items = curr_items - num_hot_items
+        num_cold_items = num_existing_items - num_hot_items
 
         left_limit = 1 + curr_deletes
         if random.randint(0, 100) <= self.working_set_access:
