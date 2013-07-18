@@ -36,7 +36,7 @@ class ExistingKey(Iterator):
             left_limit += num_cold_items
             right_limit = curr_items
         else:
-            right_limit = num_cold_items
+            right_limit = left_limit + num_cold_items
         return 'key-{0}'.format(random.randint(left_limit, right_limit))
 
 
