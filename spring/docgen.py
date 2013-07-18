@@ -27,7 +27,7 @@ class ExistingKey(Iterator):
 
     @with_prefix
     def next(self, curr_items, curr_deletes):
-        num_hot_keys = curr_items * self.working_set / 100.0
+        num_hot_keys = int(curr_items * self.working_set / 100.0)
         num_cold_items = curr_items - num_hot_keys
 
         left_limit = 1 + curr_deletes
@@ -47,7 +47,7 @@ class SequentialHotKey(object):
         self.prefix = prefix
 
     def __iter__(self):
-        num_hot_keys = self.ws.items * self.ws.working_set / 100.0
+        num_hot_keys = int(self.ws.items * self.ws.working_set / 100.0)
         num_cold_items = self.ws.items - num_hot_keys
         keys_per_worker = num_hot_keys / self.ws.workers
         left_limit = 1 + num_cold_items + self.sid * keys_per_worker
