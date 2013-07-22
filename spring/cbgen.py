@@ -4,7 +4,7 @@ from couchbase import Couchbase
 class CBGen(object):
 
     def __init__(self, *args, **kwargs):
-        self.client = Couchbase.connect(*args, **kwargs, quiet=True)
+        self.client = Couchbase.connect(*args, **kwargs, quiet=True, timeout=60)
 
     def create(self, key, doc):
         self.client.set(key, doc)
