@@ -53,7 +53,7 @@ class SequentialHotKey(object):
         num_cold_items = self.ws.items - num_hot_keys
         keys_per_worker = num_hot_keys / self.ws.workers
         left_limit = 1 + num_cold_items + self.sid * keys_per_worker
-        right_limit = self.ws.items
+        right_limit = left_limit + keys_per_worker
 
         for seq_id in range(left_limit, right_limit):
             key = 'key-{0}'.format(seq_id)
