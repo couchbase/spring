@@ -4,29 +4,25 @@ from hashlib import md5
 from itertools import cycle
 
 
-def with_prefix(method):
-    def wrapper(self, *args, **kwargs):
-        key = method(self, *args, **kwargs)
-        if self.prefix is not None:
-            key = '{0}-{1}'.format(self.prefix, key)
-        return key
-    return wrapper
-
-
 class Iterator(object):
 
     def __iter__(self):
         return self
 
+    def add_prefix(self, key):
+        if self.prefix is None:
+            return '{0}-{1}'.format(self.prefix, key)
+        else:
+            return key
+
 
 class ExistingKey(Iterator):
 
-    def __init__(self, working_set, working_set_access, prefix=None):
+    def __init__(self, working_set, working_set_access, prefix):
         self.working_set = working_set
         self.working_set_access = working_set_access
         self.prefix = prefix
 
-    @with_prefix
     def next(self, curr_items, curr_deletes):
         num_existing_items = curr_items - curr_deletes
         num_hot_items = int(num_existing_items * self.working_set / 100.0)
@@ -38,10 +34,11 @@ class ExistingKey(Iterator):
             right_limit = curr_items
         else:
             right_limit = left_limit + num_cold_items
-        return 'key-{0}'.format(random.randint(left_limit, right_limit))
+        key = 'key-{0}'.format(random.randint(left_limit, right_limit))
+        return self.add_prefix(key)
 
 
-class SequentialHotKey(object):
+class SequentialHotKey(Iterator):
 
     def __init__(self, sid, ws, prefix):
         self.sid = sid
@@ -57,33 +54,34 @@ class SequentialHotKey(object):
 
         for seq_id in range(left_limit, right_limit):
             key = 'key-{0}'.format(seq_id)
-            if self.prefix is not None:
-                key = '{0}-{1}'.format(self.prefix, key)
+            key = self.add_prefix(key)
             yield key
 
 
 class NewKey(Iterator):
 
-    def __init__(self, prefix=None, expiration=0):
+    def __init__(self, prefix, expiration):
         self.prefix = prefix
         self.expiration = expiration
         self.ttls = cycle(range(150, 450, 30))
 
-    @with_prefix
     def next(self, curr_items):
         key = 'key-{0}'.format(curr_items)
+        key = self.add_prefix(key)
         ttl = None
         if self.expiration and random.randint(1, 100) <= self.expiration:
             ttl = self.ttls.next()
         return key, ttl
 
 
-class KeyForRemoval(NewKey):
+class KeyForRemoval(Iterator):
 
-    @with_prefix
+    def __init__(self, prefix):
+        self.prefix = prefix
+
     def next(self, curr_deletes):
         key = 'key-{0}'.format(curr_deletes)
-        return key
+        return self.add_prefix(key)
 
 
 class NewDocument(Iterator):
