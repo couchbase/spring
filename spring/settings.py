@@ -22,6 +22,7 @@ class WorkloadSettings(object):
         self.workers = options.workers
 
         self.seq_reads = options.seq_reads
+        self.expiration = options.expiration
 
 
 class TargetSettings(object):

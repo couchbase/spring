@@ -31,6 +31,7 @@ Usage
           -r             percentage of "read" operations (0 by default)
           -u             percentage of "update" operations (0 by default)
           -d             percentage of "delete" operations (0 by default)
+          -e             percentage of new items that expire (0 by default)
           -o             total number of operations (infinity by default)
           -t             target operations throughput (infinity by default)
           -s             average value size in bytes (2048 by default)

@@ -1,6 +1,7 @@
 import math
 import random
 from hashlib import md5
+from itertools import cycle
 
 
 def with_prefix(method):
@@ -63,13 +64,18 @@ class SequentialHotKey(object):
 
 class NewKey(Iterator):
 
-    def __init__(self, prefix=None):
+    def __init__(self, prefix=None, expiration=0):
         self.prefix = prefix
+        self.expiration = expiration
+        self.ttls = cycle(range(150, 450, 30))
 
     @with_prefix
     def next(self, curr_items):
         key = 'key-{0}'.format(curr_items)
-        return key
+        ttl = None
+        if self.expiration and random.randint(1, 100) <= self.expiration:
+            ttl = self.ttls.next()
+        return key, ttl
 
 
 class KeyForRemoval(NewKey):

@@ -66,9 +66,9 @@ class WorkloadGen(object):
         for i, op in enumerate(self._gen_sequence()):
             if op == 'c':
                 curr_items_tmp += 1
-                key = self.new_keys.next(curr_items_tmp)
+                key, ttl = self.new_keys.next(curr_items_tmp)
                 doc = self.docs.next(key)
-                self.cb.create(key, doc)
+                self.cb.create(key, doc, ttl)
             elif op == 'r':
                 key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
                 self.cb.read(key)
@@ -102,7 +102,7 @@ class WorkloadGen(object):
         self.existing_keys = ExistingKey(self.ws.working_set,
                                          self.ws.working_set_access,
                                          self.ts.prefix)
-        self.new_keys = NewKey(self.ts.prefix)
+        self.new_keys = NewKey(self.ts.prefix, self.ws.expiration)
         self.keys_for_removal = KeyForRemoval(self.ts.prefix)
         self.docs = NewDocument(self.ws.size)
 
