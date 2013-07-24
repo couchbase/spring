@@ -26,8 +26,8 @@ Usage
 
         optional arguments:
           -h, --help     show this help message and exit
-          -v             show program's version number and exit
-          -c             percentage of "create" operations (100 by default)
+          -v, --version  show program's version number and exit
+          -c             percentage of "create" operations (0 by default)
           -r             percentage of "read" operations (0 by default)
           -u             percentage of "update" operations (0 by default)
           -d             percentage of "delete" operations (0 by default)
@@ -35,7 +35,8 @@ Usage
           -t             target operations throughput (infinity by default)
           -s             average value size in bytes (2048 by default)
           -i             number of existing items (0 by default)
-          -w             fractional ratio of working set (1.0 by default)
+          -w             percentage of items in working set, 100 by default
+          -W             percentage of operations that hit working set, 100 by default
           -n             number of workers (1 by default)
 
 Examples
