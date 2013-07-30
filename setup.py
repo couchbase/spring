@@ -14,8 +14,8 @@ setup(
         'console_scripts': ['spring = spring.main:main']
     },
     install_requires=[
-        'argparse==1.2.1',
-        'couchbase<=1.0.1',
-        'logger==1.1'
+        'argparse',
+        'couchbase==1.0.0',
+        'logger'
     ]
 )
