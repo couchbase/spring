@@ -101,6 +101,7 @@ class WorkloadGen(object):
             self.cb.read(key)
 
     def _do_seq_updates(self, sid):
+        self.docs = NewDocument(self.ws.size)
         for key in SequentialHotKey(sid, self.ws, self.ts.prefix):
             doc = self.docs.next(key)
             self.cb.update(key, doc)
