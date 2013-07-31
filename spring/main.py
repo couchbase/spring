@@ -103,6 +103,7 @@ def main():
     parser = CLIParser()
     args = parser.parse_args()
     args.seq_reads = False
+    args.seq_updates = False
 
     ws = WorkloadSettings(args)
     ts = TargetSettings(args.uri)

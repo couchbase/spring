@@ -91,12 +91,19 @@ class WorkloadGen(object):
 
         if self.ws.seq_reads:
             self._do_seq_reads(sid)
+        elif self.ws.seq_updates:
+            self._do_seq_updates(sid)
         else:
             self._run_workload(sid, *args)
 
     def _do_seq_reads(self, sid):
         for key in SequentialHotKey(sid, self.ws, self.ts.prefix):
             self.cb.read(key)
+
+    def _do_seq_updates(self, sid):
+        for key in SequentialHotKey(sid, self.ws, self.ts.prefix):
+            doc = self.docs.next(key)
+            self.cb.update(key, doc)
 
     def _run_workload(self, sid, lock, curr_ops, curr_items, deleted_items):
         self.existing_keys = ExistingKey(self.ws.working_set,

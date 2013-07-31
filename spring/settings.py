@@ -16,13 +16,14 @@ class WorkloadSettings(object):
 
         self.size = options.size
         self.items = options.items
+        self.expiration = options.expiration
         self.working_set = options.working_set
         self.working_set_access = options.working_set_access
 
         self.workers = options.workers
 
         self.seq_reads = options.seq_reads
-        self.expiration = options.expiration
+        self.seq_updates = options.seq_updates
 
 
 class TargetSettings(object):
