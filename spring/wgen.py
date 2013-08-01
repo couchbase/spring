@@ -89,11 +89,11 @@ class WorkloadGen(object):
         except Exception as e:
             raise SystemExit(e)
 
+        if self.ws.seq_updates:
+            self._do_seq_updates(sid)
         if self.ws.seq_reads:
             self._do_seq_reads(sid)
-        elif self.ws.seq_updates:
-            self._do_seq_updates(sid)
-        else:
+        if not (self.ws.seq_updates or self.ws.seq_reads):
             self._run_workload(sid, *args)
 
     def _do_seq_reads(self, sid):
