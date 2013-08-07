@@ -118,7 +118,7 @@ class NewDocument(Iterator):
 
     @staticmethod
     def _build_coins(alphabet):
-        return max(0.0, int(alphabet[36:40], 16) / 100.0)
+        return max(0.1, int(alphabet[36:40], 16) / 100.0)
 
     @staticmethod
     def _build_category(alphabet):

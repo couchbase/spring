@@ -1,4 +1,7 @@
 from couchbase import Couchbase
+from couchbase.exceptions import ConnectError, HTTPError
+
+from logger import logger
 
 
 class CBGen(object):
@@ -20,3 +23,9 @@ class CBGen(object):
 
     def delete(self, key):
         self.client.delete(key)
+
+    def query(self, ddoc, view, query):
+        try:
+            tuple(self.client.query(ddoc, view, query=query))
+        except (ConnectError, HTTPError) as e:
+            logger.warn(e)

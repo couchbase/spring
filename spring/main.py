@@ -104,6 +104,7 @@ def main():
     args = parser.parse_args()
     args.seq_reads = False
     args.seq_updates = False
+    args.query_workers = 0
 
     ws = WorkloadSettings(args)
     ts = TargetSettings(args.uri)

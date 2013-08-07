@@ -21,6 +21,7 @@ class WorkloadSettings(object):
         self.working_set_access = options.working_set_access
 
         self.workers = options.workers
+        self.query_workers = options.query_workers
 
         self.seq_reads = options.seq_reads
         self.seq_updates = options.seq_updates
