@@ -6,11 +6,14 @@ from itertools import cycle
 
 class Iterator(object):
 
+    def __init__(self):
+        self.prefix = None
+
     def __iter__(self):
         return self
 
     def add_prefix(self, key):
-        if self.prefix is None:
+        if self.prefix:
             return '{0}-{1}'.format(self.prefix, key)
         else:
             return key
