@@ -51,8 +51,8 @@ class Worker(object):
     def init_db(self):
         try:
             host, port = self.ts.node.split(':')
-            self.cb = CBGen(self.ts.bucket, host, port,
-                            self.ts.username, self.ts.password)
+            self.cb = CBGen(bucket=self.ts.bucket, host=host, port=port,
+                            username=self.ts.bucket, password=self.ts.password)
         except Exception as e:
             raise SystemExit(e)
 

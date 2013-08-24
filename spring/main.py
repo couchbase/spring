@@ -20,7 +20,7 @@ class CLIParser(ArgumentParser):
     def _add_arguments(self):
         self.add_argument(
             'uri',  metavar='URI', nargs='?',
-            default='couchbase://127.0.0.1:8091/default',
+            default='cb://127.0.0.1:8091/default',
             help='Connection URI'
         )
         self.add_argument(
