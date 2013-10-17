@@ -1,6 +1,7 @@
 from itertools import cycle
 import random
 
+from couchbase.views.params import Query
 
 class NewTuq(object):
 
@@ -35,3 +36,26 @@ class NewTuq(object):
     def next(self, doc):
         index, qtype = self.tuq_seq.next()
         return self._generate_tuq(doc, index, qtype)
+
+class NewCBQuery(NewTuq):
+
+    def _get_view_info(self, index):
+        return 'ddl_%s_idx' % index, '%s_idx' % index
+
+    def _generate_params(self, doc, index, qtype):
+        if qtype == 'where_range':
+            range = self._get_range(doc[index])
+            return {
+                'startkey': range[0],
+                'endkey': range[1],
+            }
+        elif qtype == 'where_equal':
+            return  {
+                'key': doc[index],
+            }
+
+    def next(self, doc):
+        index, qtype = self.tuq_seq.next()
+        ddoc_name, view_name = self._get_view_info(index)
+        params = self._generate_params(doc, index, qtype)
+        return ddoc_name, view_name, Query(**params)
