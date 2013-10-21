@@ -46,11 +46,13 @@ class NewCBQuery(NewTuq):
         if qtype == 'where_range':
             range = self._get_range(doc[index])
             return {
+                'stale': 'false',
                 'startkey': range[0],
                 'endkey': range[1],
             }
         elif qtype == 'where_equal':
             return  {
+                'stale': 'false',
                 'key': doc[index],
             }
 
