@@ -44,6 +44,9 @@ class NewTuq(object):
 
 class NewCBQuery(NewTuq):
 
+    def _to_query_param(self, val):
+        return [[128, val]]
+
     def _get_view_info(self, index):
         return 'ddl_%s_idx' % index, '%s_idx' % index
 
@@ -52,19 +55,19 @@ class NewCBQuery(NewTuq):
             range = self._get_range(doc[index])
             return {
                 'stale': 'false',
-                'startkey': range[0],
-                'endkey': range[1],
+                'startkey': self._to_query_param(range[0]),
+                'endkey': self._to_query_param(range[1]),
             }
-        if qtype == 'where_range':
+        if qtype == 'where_lt':
             range = self._get_range(doc[index])
             return {
                 'stale': 'false',
-                'endkey': range[1],
+                'endkey': self._to_query_param(range[1]),
             }
         elif qtype == 'where_equal':
             return  {
                 'stale': 'false',
-                'key': doc[index],
+                'key': self._to_query_param(doc[index]),
             }
 
     def next(self, doc):
