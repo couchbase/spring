@@ -5,10 +5,12 @@ from couchbase.views.params import Query
 
 class NewTuq(object):
 
+    LIMIT = 30
+
     QUERIES_PER_TYPE = {
         'where_range': 2,
-        'where_equal': 2,
         'where_lt': 2,
+        'where_equal': 2,
         }
 
     def __init__(self, indexes, bucket):
@@ -26,12 +28,12 @@ class NewTuq(object):
     def _generate_tuq(self, doc, index, qtype):
         if qtype == 'where_range':
             range = self._get_range(doc[index])
-            return 'SELECT %s FROM %s WHERE %s > %s AND %s < %s'\
-                   % (index, self.bucket, index, range[0], index, range[1])
+            return 'SELECT %s FROM %s WHERE %s > %s AND %s < %s LIMIT %s'\
+                   % (index, self.bucket, index, range[0], index, range[1], NewTuq.LIMIT)
         elif qtype == 'where_lt':
             range = self._get_range(doc[index])
-            return 'SELECT %s FROM %s WHERE %s < %s'\
-                   % (index, self.bucket, index, range[1])
+            return 'SELECT %s FROM %s WHERE %s < %s LIMIT %s'\
+                   % (index, self.bucket, index, range[1], NewTuq.LIMIT)
         elif qtype == 'where_equal':
             return 'SELECT %s FROM %s WHERE %s = %s' \
                    % (index, self.bucket, index, doc[index])
@@ -57,12 +59,14 @@ class NewCBQuery(NewTuq):
                 'stale': 'false',
                 'startkey': self._to_query_param(range[0]),
                 'endkey': self._to_query_param(range[1]),
+                'limit': NewTuq.LIMIT,
             }
         if qtype == 'where_lt':
             range = self._get_range(doc[index])
             return {
                 'stale': 'false',
                 'endkey': self._to_query_param(range[1]),
+                'limit': NewTuq.LIMIT,
             }
         elif qtype == 'where_equal':
             return  {
