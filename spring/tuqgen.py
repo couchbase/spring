@@ -59,14 +59,12 @@ class NewCBQuery(NewTuq):
                 'stale': 'false',
                 'startkey': self._to_query_param(range[0]),
                 'endkey': self._to_query_param(range[1]),
-                'limit': NewTuq.LIMIT,
             }
         if qtype == 'where_lt':
             range = self._get_range(doc[index])
             return {
                 'stale': 'false',
                 'endkey': self._to_query_param(range[1]),
-                'limit': NewTuq.LIMIT,
             }
         elif qtype == 'where_equal':
             return  {
@@ -78,4 +76,8 @@ class NewCBQuery(NewTuq):
         index, qtype = self.tuq_seq.next()
         ddoc_name, view_name = self._get_view_info(index)
         params = self._generate_params(doc, index, qtype)
-        return ddoc_name, view_name, Query(**params)
+        if qtype in ['where_equal',]:
+            query = Query(**params)
+        else:
+            query = Query(limit=NewTuq.LIMIT, **params)
+        return ddoc_name, view_name, query
