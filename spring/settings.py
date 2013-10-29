@@ -10,6 +10,7 @@ class WorkloadSettings(object):
         self.reads = options.reads
         self.updates = options.updates
         self.deletes = options.deletes
+        self.cases = options.cases
 
         self.ops = options.ops
         self.throughput = options.throughput

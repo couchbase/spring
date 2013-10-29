@@ -75,7 +75,8 @@ class KVWorker(Worker):
             ['c'] * self.ws.creates + \
             ['r'] * self.ws.reads + \
             ['u'] * self.ws.updates + \
-            ['d'] * self.ws.deletes
+            ['d'] * self.ws.deletes + \
+            ['cas'] * self.ws.cases
         random.shuffle(ops)
         return ops
 
@@ -107,6 +108,10 @@ class KVWorker(Worker):
                 deleted_items_tmp += 1
                 key = self.keys_for_removal.next(deleted_items_tmp)
                 self.cb.delete(key)
+            elif op == 'cas':
+                key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
+                doc = self.docs.next(key)
+                self.cb.cas(key, doc)
 
     def run(self, sid, lock, curr_ops, curr_items, deleted_items):
         if self.ws.throughput < float('inf'):
