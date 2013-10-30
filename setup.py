@@ -15,7 +15,7 @@ setup(
     },
     install_requires=[
         'argparse',
-        'couchbase==1.0.0',
+        'couchbase==1.1.0',
         'decorator',
         'logger'
     ]
