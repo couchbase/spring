@@ -205,6 +205,7 @@ class WorkloadGen(object):
     def __init__(self, workload_settings, target_settings, shutdown_event=None,
                  ddocs=None):
         self.ws = workload_settings
+        logger.info("settings: %s" % self.ws)
         self.ts = target_settings
         self.shutdown_event = shutdown_event
         self.ddocs = ddocs
