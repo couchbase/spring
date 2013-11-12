@@ -10,6 +10,7 @@ class NewTuq(object):
     QUERIES_PER_TYPE = {
         'where_range': 2,
         'where_lt': 2,
+        'where_gt': 2,
         'where_equal': 2,
         }
 
@@ -33,6 +34,10 @@ class NewTuq(object):
         elif qtype == 'where_lt':
             range = self._get_range(doc[index])
             return 'SELECT %s FROM %s WHERE %s < %s LIMIT %s'\
+                   % (index, self.bucket, index, range[1], NewTuq.LIMIT)
+        elif qtype == 'where_gt':
+            range = self._get_range(doc[index])
+            return 'SELECT %s FROM %s WHERE %s > %s LIMIT %s'\
                    % (index, self.bucket, index, range[1], NewTuq.LIMIT)
         elif qtype == 'where_equal':
             return 'SELECT %s FROM %s WHERE %s = %s' \
@@ -64,6 +69,11 @@ class NewCBQuery(NewTuq):
             return {
                 'endkey': self._to_query_param(range[1]),
             }
+        if qtype == 'where_gt':
+            range = self._get_range(doc[index])
+            return {
+                'startkey': self._to_query_param(range[1]),
+                }
         elif qtype == 'where_equal':
             return  {
                 'key': self._to_query_param(doc[index]),
