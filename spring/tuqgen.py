@@ -10,8 +10,9 @@ class NewTuq(object):
     QUERIES_PER_TYPE = {
         'where_range': 2,
         'where_lt': 2,
+        'where_lt_neg': 2,
         'where_gt': 2,
-        'where_equal': 2,
+        'where_equal': 2
         }
 
     def __init__(self, indexes, bucket):
@@ -39,6 +40,9 @@ class NewTuq(object):
             range = self._get_range(doc[index])
             return 'SELECT %s FROM %s WHERE %s > %s LIMIT %s'\
                    % (index, self.bucket, index, range[1], NewTuq.LIMIT)
+        elif qtype == 'where_lt_neg':
+            return 'SELECT %s FROM %s WHERE %s < 0'\
+                   % (index, self.bucket, index)
         elif qtype == 'where_equal':
             return 'SELECT %s FROM %s WHERE %s = %s' \
                    % (index, self.bucket, index, doc[index])
@@ -74,6 +78,11 @@ class NewCBQuery(NewTuq):
             return {
                 'startkey': self._to_query_param(range[1]),
                 }
+        if qtype == 'where_lt_neg':
+            range = self._get_range(doc[index])
+            return {
+                'endkey': 0,
+                }
         elif qtype == 'where_equal':
             return  {
                 'key': self._to_query_param(doc[index]),
@@ -83,7 +92,7 @@ class NewCBQuery(NewTuq):
         index, qtype = self.tuq_seq.next()
         ddoc_name, view_name = self._get_view_info(index)
         params = self._generate_params(doc, index, qtype)
-        if qtype in ['where_equal',]:
+        if qtype in ['where_equal', 'where_lt_neg']:
             query = Query(**params)
         else:
             query = Query(limit=NewTuq.LIMIT, **params)
