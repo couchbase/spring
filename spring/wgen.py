@@ -207,12 +207,13 @@ class QueryWorker(Worker):
 class WorkloadGen(object):
 
     def __init__(self, workload_settings, target_settings, shutdown_event=None,
-                 ddocs=None):
+                 ddocs=None, neg_coins=False):
         self.ws = workload_settings
         logger.info("settings: %s" % self.ws)
         self.ts = target_settings
         self.shutdown_event = shutdown_event
         self.ddocs = ddocs
+        self.neg_coins = neg_coins
 
     def start_kv_workers(self, curr_items, deleted_items):
         curr_ops = Value('i', 0)
@@ -221,7 +222,7 @@ class WorkloadGen(object):
         worker_type = WorkerFactory(self.ws.seq_updates, self.ws.seq_reads)
         self.kv_workers = list()
         for sid in range(self.ws.workers):
-            worker = worker_type(self.ws, self.ts, self.shutdown_event)
+            worker = worker_type(self.ws, self.ts, self.shutdown_event, self.neg_coins)
             worker_process = Process(
                 target=worker.run,
                 args=(sid, lock, curr_ops, curr_items, deleted_items)
