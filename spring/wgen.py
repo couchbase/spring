@@ -7,7 +7,7 @@ from logger import logger
 
 from spring.cbgen import CBGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
-                           NewKey, NewDocument)
+                           NewKey, NewDocument, NewNegCoinDocument)
 from spring.querygen import NewQuery
 
 
@@ -32,7 +32,8 @@ class Worker(object):
 
     BATCH_SIZE = 100
 
-    def __init__(self, workload_settings, target_settings, shutdown_event=None):
+    def __init__(self, workload_settings, target_settings,
+                 shutdown_event=None, neg_coins=False):
         self.ws = workload_settings
         self.ts = target_settings
         self.shutdown_event = shutdown_event
@@ -42,7 +43,10 @@ class Worker(object):
                                          self.ts.prefix)
         self.new_keys = NewKey(self.ts.prefix, self.ws.expiration)
         self.keys_for_removal = KeyForRemoval(self.ts.prefix)
-        self.docs = NewDocument(self.ws.size)
+        if neg_coins:
+            self.docs = NewNegCoinDocument(self.ws.size)
+        else:
+            self.docs = NewDocument(self.ws.size)
 
         self.next_report = 0.05  # report after every 5% of completion
 

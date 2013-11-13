@@ -158,3 +158,24 @@ class NewDocument(Iterator):
             'body': self._build_body(alphabet, next_length)
         }
         return doc
+
+class NewNegCoinDocument(NewDocument):
+
+    @staticmethod
+    def _build_neg_coins(alphabet):
+        return min(-0.1, -int(alphabet[36:40], 16) / 100.0)
+
+    def next(self, key):
+        next_length = self._get_variation_coeff() * self.avg_size
+        alphabet = self._build_alphabet(key)
+        doc = {
+            'name': self._build_name(alphabet),
+            'email': self._build_email(alphabet),
+            'city': self._build_city(alphabet),
+            'realm': self._build_realm(alphabet),
+            'coins': self._build_neg_coins(alphabet),
+            'category': self._build_category(alphabet),
+            'achievements': self._build_achievements(alphabet),
+            'body': self._build_body(alphabet, next_length)
+        }
+        return doc
