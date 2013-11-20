@@ -1,6 +1,11 @@
 from couchbase import Couchbase
-from couchbase.exceptions import (ConnectError, HTTPError, KeyExistsError,
-                                  TemporaryFailError, TimeoutError)
+from couchbase.exceptions import (ConnectError,
+                                  CouchbaseError,
+                                  HTTPError,
+                                  KeyExistsError,
+                                  TemporaryFailError,
+                                  TimeoutError,
+                                  )
 
 from decorator import decorator
 from logger import logger
@@ -10,8 +15,8 @@ from logger import logger
 def quiet(method, *args, **kwargs):
     try:
         method(*args, **kwargs)
-    except (ConnectError, HTTPError, KeyExistsError, TemporaryFailError,
-            TimeoutError) as e:
+    except (ConnectError, CouchbaseError, HTTPError, KeyExistsError,
+            TemporaryFailError, TimeoutError) as e:
         logger.warn(e)
 
 
