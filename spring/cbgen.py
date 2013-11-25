@@ -45,6 +45,7 @@ class CBGen(object):
         cas = self.client.get(key).cas
         self.client.set(key, doc, cas=cas)
 
+    @quiet
     def delete(self, key):
         self.client.delete(key)
 
