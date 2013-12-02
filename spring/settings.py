@@ -35,7 +35,7 @@ class TargetSettings(object):
         if not params.hostname or not params.port or not params.path:
             logger.interrupt('Invalid connection URI')
 
-        self.node = '{0}:{1}'.format(params.hostname, params.port)
+        self.node = '{}:{}'.format(params.hostname, params.port)
         self.bucket = params.path[1:]
         self.username = params.username or ''
         self.password = params.password or ''

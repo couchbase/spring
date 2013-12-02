@@ -6,7 +6,7 @@ Simple Couchbase CRUD-workload generator based on pylibcouchbase
 Requirements:
 -------------
 
-* Python 2.6 or higher
+* Python 2.7 (including headers)
 * libcouchbase
 * pip or equivalent
 

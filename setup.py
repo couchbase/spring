@@ -11,10 +11,9 @@ setup(
     author_email='pavel.paulau@gmail.com',
     packages=['spring'],
     entry_points={
-        'console_scripts': ['spring = spring.main:main']
+        'console_scripts': ['spring = spring.__main__:main']
     },
     install_requires=[
-        'argparse',
         'couchbase==1.1.0',
         'decorator',
         'logger',

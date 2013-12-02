@@ -61,7 +61,7 @@ class Worker(object):
                 curr_ops > self.next_report * self.ws.ops:
             progress = 100.0 * curr_ops / self.ws.ops
             self.next_report += 0.05
-            logger.info('Current progress: {0:.2f} %'.format(progress))
+            logger.info('Current progress: {:.2f} %'.format(progress))
 
     def is_time_to_stop(self):
         return (self.shutdown_event is not None and
@@ -120,7 +120,7 @@ class KVWorker(Worker):
         else:
             target_time = None
         try:
-            logger.info('Started: worker-{0}'.format(sid))
+            logger.info('Started: worker-{}'.format(sid))
             while curr_ops.value < self.ws.ops:
                 with lock:
                     curr_ops.value += self.BATCH_SIZE
@@ -131,9 +131,9 @@ class KVWorker(Worker):
                 if self.is_time_to_stop():
                     break
         except (KeyboardInterrupt, ValueFormatError):
-            logger.info('Interrupted: worker-{0}'.format(sid))
+            logger.info('Interrupted: worker-{}'.format(sid))
         else:
-            logger.info('Finished: worker-{0}'.format(sid))
+            logger.info('Finished: worker-{}'.format(sid))
 
 
 class SeqReadsWorker(KVWorker):
@@ -189,7 +189,7 @@ class QueryWorker(Worker):
         else:
             target_time = None
         try:
-            logger.info('Started: query-worker-{0}'.format(sid))
+            logger.info('Started: query-worker-{}'.format(sid))
             while curr_queries.value < self.ws.ops:
                 with lock:
                     curr_queries.value += self.BATCH_SIZE
@@ -200,9 +200,9 @@ class QueryWorker(Worker):
                 if self.is_time_to_stop():
                     break
         except (KeyboardInterrupt, ValueFormatError, AttributeError):
-            logger.info('Interrupted: query-worker-{0}'.format(sid))
+            logger.info('Interrupted: query-worker-{}'.format(sid))
         else:
-            logger.info('Finished: query-worker-{0}'.format(sid))
+            logger.info('Finished: query-worker-{}'.format(sid))
 
 
 class WorkloadGen(object):
