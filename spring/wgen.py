@@ -1,7 +1,7 @@
-import random
 import time
 from multiprocessing import Process, Value, Lock
 
+from numpy import random
 from couchbase.exceptions import ValueFormatError
 from logger import logger
 

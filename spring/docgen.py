@@ -1,7 +1,8 @@
 import math
-import random
 from hashlib import md5
 from itertools import cycle
+
+from numpy import random
 
 
 class Iterator(object):
@@ -32,12 +33,12 @@ class ExistingKey(Iterator):
         num_cold_items = num_existing_items - num_hot_items
 
         left_limit = 1 + curr_deletes
-        if random.randint(0, 100) <= self.working_set_access:
+        if random.random_integers(0, 100) <= self.working_set_access:
             left_limit += num_cold_items
             right_limit = curr_items
         else:
             right_limit = left_limit + num_cold_items
-        key = 'key-{0}'.format(random.randint(left_limit, right_limit))
+        key = 'key-{0}'.format(random.random_integers(left_limit, right_limit))
         return self.add_prefix(key)
 
 
@@ -72,7 +73,7 @@ class NewKey(Iterator):
         key = 'key-{0}'.format(curr_items)
         key = self.add_prefix(key)
         ttl = None
-        if self.expiration and random.randint(1, 100) <= self.expiration:
+        if self.expiration and random.random_integers(1, 100) <= self.expiration:
             ttl = self.ttls.next()
         return key, ttl
 

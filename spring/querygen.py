@@ -1,5 +1,5 @@
 from itertools import cycle
-import random
+from numpy import random
 
 from couchbase.views.params import Query
 

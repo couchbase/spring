@@ -17,6 +17,7 @@ setup(
         'argparse',
         'couchbase==1.1.0',
         'decorator',
-        'logger'
+        'logger',
+        'numpy',
     ]
 )
