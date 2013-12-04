@@ -55,8 +55,8 @@ class Worker(object):
         except Exception as e:
             raise SystemExit(e)
 
-    def report_progress(self, curr_ops):
-        if self.ws.ops < float('inf') and \
+    def report_progress(self, sid, curr_ops):  # only first worker
+        if not sid and self.ws.ops < float('inf') and \
                 curr_ops > self.next_report * self.ws.ops:
             progress = 100.0 * curr_ops / self.ws.ops
             self.next_report += 0.05
@@ -131,9 +131,7 @@ class KVWorker(Worker):
                 with lock:
                     curr_ops.value += self.BATCH_SIZE
                 self.do_batch()
-
-                if not sid:  # only first worker
-                    self.report_progress(curr_ops.value)
+                self.report_progress(sid, curr_ops.value)
         except (KeyboardInterrupt, ValueFormatError):
             logger.info('Interrupted: worker-{}'.format(sid))
         else:
@@ -201,8 +199,7 @@ class QueryWorker(Worker):
                 with lock:
                     curr_queries.value += self.BATCH_SIZE
                 self.do_batch()
-                if not sid:  # only first worker
-                    self.report_progress(curr_queries.value)
+                self.report_progress(sid, curr_queries.value)
         except (KeyboardInterrupt, ValueFormatError, AttributeError):
             logger.info('Interrupted: query-worker-{}'.format(sid))
         else:
