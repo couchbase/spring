@@ -62,7 +62,7 @@ class Worker(object):
             self.next_report += 0.05
             logger.info('Current progress: {:.2f} %'.format(progress))
 
-    def is_time_to_stop(self):
+    def time_to_stop(self):
         return (self.shutdown_event is not None and
                 self.shutdown_event.is_set())
 
@@ -124,15 +124,13 @@ class KVWorker(Worker):
 
         logger.info('Started: worker-{}'.format(sid))
         try:
-            while curr_ops.value < self.ws.ops:
+            while curr_ops.value < self.ws.ops and not self.time_to_stop():
                 with lock:
                     curr_ops.value += self.BATCH_SIZE
                 self.do_batch()
 
                 if not sid:  # only first worker
                     self.report_progress(curr_ops.value)
-                if self.is_time_to_stop():
-                    break
         except (KeyboardInterrupt, ValueFormatError):
             logger.info('Interrupted: worker-{}'.format(sid))
         else:
@@ -196,14 +194,12 @@ class QueryWorker(Worker):
 
         try:
             logger.info('Started: query-worker-{}'.format(sid))
-            while curr_queries.value < self.ws.ops:
+            while curr_queries.value < self.ws.ops and not self.time_to_stop():
                 with lock:
                     curr_queries.value += self.BATCH_SIZE
                 self.do_batch()
                 if not sid:  # only first worker
                     self.report_progress(curr_queries.value)
-                if self.is_time_to_stop():
-                    break
         except (KeyboardInterrupt, ValueFormatError, AttributeError):
             logger.info('Interrupted: query-worker-{}'.format(sid))
         else:
