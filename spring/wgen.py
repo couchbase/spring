@@ -16,15 +16,14 @@ def with_sleep(method):
     CORRECTION_FACTOR = 0.975  # empiric!
 
     def wrapper(self, *args, **kwargs):
-        target_time = kwargs['target_time']
-        if target_time is None:
+        if self.target_time is None:
             return method(self, *args, **kwargs)
         else:
             t0 = time.time()
             method(self, *args, **kwargs)
             actual_time = time.time() - t0
-            if actual_time < target_time:
-                time.sleep(CORRECTION_FACTOR * (target_time - actual_time))
+            if actual_time < self.target_time:
+                time.sleep(CORRECTION_FACTOR * (self.target_time - actual_time))
     return wrapper
 
 
@@ -46,13 +45,13 @@ class Worker(object):
 
         self.next_report = 0.05  # report after every 5% of completion
 
-        self.init_db()
+        host, port = self.ts.node.split(':')
+        self.init_db({"bucket": self.ts.bucket, "host": host, "port": port,
+                      "username": self.ts.bucket, "password": self.ts.password})
 
-    def init_db(self):
+    def init_db(self, params):
         try:
-            host, port = self.ts.node.split(':')
-            self.cb = CBGen(bucket=self.ts.bucket, host=host, port=port,
-                            username=self.ts.bucket, password=self.ts.password)
+            self.cb = CBGen(**params)
         except Exception as e:
             raise SystemExit(e)
 
@@ -81,15 +80,15 @@ class KVWorker(Worker):
         return ops
 
     @with_sleep
-    def do_batch(self, curr_items, deleted_items, lock, target_time):
-        curr_items_tmp = curr_items.value
-        deleted_items_tmp = deleted_items.value
+    def do_batch(self):
+        curr_items_tmp = self.curr_items.value
+        deleted_items_tmp = self.deleted_items.value
         if self.ws.creates:
-            with lock:
-                curr_items.value += self.ws.creates
+            with self.lock:
+                self.curr_items.value += self.ws.creates
         if self.ws.deletes:
-            with lock:
-                deleted_items.value += self.ws.deletes
+            with self.lock:
+                self.deleted_items.value += self.ws.deletes
 
         for op in self.gen_sequence():
             if op == 'c':
@@ -115,17 +114,21 @@ class KVWorker(Worker):
 
     def run(self, sid, lock, curr_ops, curr_items, deleted_items):
         if self.ws.throughput < float('inf'):
-            target_time = float(self.BATCH_SIZE) * self.ws.workers / \
+            self.target_time = float(self.BATCH_SIZE) * self.ws.workers / \
                 self.ws.throughput
         else:
-            target_time = None
+            self.target_time = None
+        self.lock = lock
+        self.curr_items = curr_items
+        self.deleted_items = deleted_items
+
+        logger.info('Started: worker-{}'.format(sid))
         try:
-            logger.info('Started: worker-{}'.format(sid))
             while curr_ops.value < self.ws.ops:
                 with lock:
                     curr_ops.value += self.BATCH_SIZE
-                self.do_batch(curr_items, deleted_items, lock,
-                              target_time=target_time)
+                self.do_batch()
+
                 if not sid:  # only first worker
                     self.report_progress(curr_ops.value)
                 if self.is_time_to_stop():
@@ -172,9 +175,9 @@ class QueryWorker(Worker):
         self.new_queries = NewQuery(ddocs)
 
     @with_sleep
-    def do_batch(self, curr_items, deleted_items, target_time):
-        curr_items_tmp = curr_items.value
-        deleted_items_tmp = deleted_items.value
+    def do_batch(self):
+        curr_items_tmp = self.curr_items.value
+        deleted_items_tmp = self.deleted_items.value
 
         for _ in xrange(self.BATCH_SIZE):
             key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
@@ -184,17 +187,19 @@ class QueryWorker(Worker):
 
     def run(self, sid, lock, curr_queries, curr_items, deleted_items):
         if self.ws.query_throughput < float('inf'):
-            target_time = float(self.BATCH_SIZE) * self.ws.query_workers / \
+            self.target_time = float(self.BATCH_SIZE) * self.ws.query_workers / \
                 self.ws.query_throughput
         else:
-            target_time = None
+            self.target_time = None
+        self.curr_items = curr_items
+        self.deleted_items = deleted_items
+
         try:
             logger.info('Started: query-worker-{}'.format(sid))
             while curr_queries.value < self.ws.ops:
                 with lock:
                     curr_queries.value += self.BATCH_SIZE
-                self.do_batch(curr_items, deleted_items,
-                              target_time=target_time)
+                self.do_batch()
                 if not sid:  # only first worker
                     self.report_progress(curr_queries.value)
                 if self.is_time_to_stop():
