@@ -90,27 +90,30 @@ class KVWorker(Worker):
             with self.lock:
                 self.deleted_items.value += self.ws.deletes
 
+        cmds = []
         for op in self.gen_sequence():
             if op == 'c':
                 curr_items_tmp += 1
                 key, ttl = self.new_keys.next(curr_items_tmp)
                 doc = self.docs.next(key)
-                self.cb.create(key, doc, ttl)
+                cmds.append((self.cb.create, (key, doc, ttl)))
             elif op == 'r':
                 key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
-                self.cb.read(key)
+                cmds.append((self.cb.read, (key, )))
             elif op == 'u':
                 key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
                 doc = self.docs.next(key)
-                self.cb.update(key, doc)
+                cmds.append((self.cb.update, (key, doc)))
             elif op == 'd':
                 deleted_items_tmp += 1
                 key = self.keys_for_removal.next(deleted_items_tmp)
-                self.cb.delete(key)
+                cmds.append((self.cb.delete, (key, )))
             elif op == 'cas':
                 key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
                 doc = self.docs.next(key)
-                self.cb.cas(key, doc)
+                cmds.append((self.cb.cas, (key, doc)))
+        for cmd, args in cmds:
+            cmd(*args)
 
     def run(self, sid, lock, curr_ops, curr_items, deleted_items):
         if self.ws.throughput < float('inf'):
