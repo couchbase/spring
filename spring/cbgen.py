@@ -1,4 +1,3 @@
-from couchbase import Couchbase
 from couchbase.exceptions import (ConnectError,
                                   CouchbaseError,
                                   HTTPError,
@@ -6,6 +5,7 @@ from couchbase.exceptions import (ConnectError,
                                   TemporaryFailError,
                                   TimeoutError,
                                   )
+from couchbase.connection import Connection
 
 from decorator import decorator
 from logger import logger
@@ -14,7 +14,7 @@ from logger import logger
 @decorator
 def quiet(method, *args, **kwargs):
     try:
-        method(*args, **kwargs)
+        return method(*args, **kwargs)
     except (ConnectError, CouchbaseError, HTTPError, KeyExistsError,
             TemporaryFailError, TimeoutError) as e:
         logger.warn(e)
@@ -22,33 +22,33 @@ def quiet(method, *args, **kwargs):
 
 class CBGen(object):
 
-    def __init__(self, *args, **kwargs):
-        self.client = Couchbase.connect(*args, quiet=True, timeout=60, **kwargs)
+    def __init__(self, **kwargs):
+        self.client = Connection(quiet=True, timeout=60, **kwargs)
 
     @quiet
     def create(self, key, doc, ttl=None):
         extra_params = {}
         if ttl is None:
             extra_params['ttl'] = ttl
-        self.client.set(key, doc, **extra_params)
+        return self.client.set(key, doc, **extra_params)
 
     @quiet
     def read(self, key):
-        self.client.get(key)
+        return self.client.get(key)
 
     @quiet
     def update(self, key, doc):
-        self.client.set(key, doc)
+        return self.client.set(key, doc)
 
     @quiet
     def cas(self, key, doc):
         cas = self.client.get(key).cas
-        self.client.set(key, doc, cas=cas)
+        return self.client.set(key, doc, cas=cas)
 
     @quiet
     def delete(self, key):
-        self.client.delete(key)
+        return self.client.delete(key)
 
     @quiet
     def query(self, ddoc, view, query):
-        tuple(self.client.query(ddoc, view, query=query))
+        return tuple(self.client.query(ddoc, view, query=query))
