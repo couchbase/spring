@@ -55,8 +55,8 @@ class Worker(object):
         except Exception as e:
             raise SystemExit(e)
 
-    def report_progress(self, sid, curr_ops):  # only first worker
-        if not sid and self.ws.ops < float('inf') and \
+    def report_progress(self, curr_ops):  # only first worker
+        if not self.sid and self.ws.ops < float('inf') and \
                 curr_ops > self.next_report * self.ws.ops:
             progress = 100.0 * curr_ops / self.ws.ops
             self.next_report += 0.05
@@ -121,21 +121,22 @@ class KVWorker(Worker):
                 self.ws.throughput
         else:
             self.target_time = None
+        self.sid = sid
         self.lock = lock
         self.curr_items = curr_items
         self.deleted_items = deleted_items
 
-        logger.info('Started: worker-{}'.format(sid))
+        logger.info('Started: worker-{}'.format(self.sid))
         try:
             while curr_ops.value < self.ws.ops and not self.time_to_stop():
                 with lock:
                     curr_ops.value += self.BATCH_SIZE
                 self.do_batch()
-                self.report_progress(sid, curr_ops.value)
+                self.report_progress(curr_ops.value)
         except (KeyboardInterrupt, ValueFormatError):
-            logger.info('Interrupted: worker-{}'.format(sid))
+            logger.info('Interrupted: worker-{}'.format(self.sid))
         else:
-            logger.info('Finished: worker-{}'.format(sid))
+            logger.info('Finished: worker-{}'.format(self.sid))
 
 
 class SeqReadsWorker(KVWorker):
@@ -190,20 +191,21 @@ class QueryWorker(Worker):
                 self.ws.query_throughput
         else:
             self.target_time = None
+        self.sid = sid
         self.curr_items = curr_items
         self.deleted_items = deleted_items
 
         try:
-            logger.info('Started: query-worker-{}'.format(sid))
+            logger.info('Started: query-worker-{}'.format(self.sid))
             while curr_queries.value < self.ws.ops and not self.time_to_stop():
                 with lock:
                     curr_queries.value += self.BATCH_SIZE
                 self.do_batch()
-                self.report_progress(sid, curr_queries.value)
+                self.report_progress(curr_queries.value)
         except (KeyboardInterrupt, ValueFormatError, AttributeError):
-            logger.info('Interrupted: query-worker-{}'.format(sid))
+            logger.info('Interrupted: query-worker-{}'.format(self.sid))
         else:
-            logger.info('Finished: query-worker-{}'.format(sid))
+            logger.info('Finished: query-worker-{}'.format(self.sid))
 
 
 class WorkloadGen(object):
