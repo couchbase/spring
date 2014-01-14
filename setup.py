@@ -14,7 +14,7 @@ setup(
         'console_scripts': ['spring = spring.__main__:main']
     },
     install_requires=[
-        'couchbase==1.1.0',
+        'couchbase==1.2.0',
         'decorator',
         'logger',
         'numpy',
