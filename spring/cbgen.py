@@ -24,6 +24,7 @@ class CBGen(object):
 
     def __init__(self, **kwargs):
         self.client = Connection(quiet=True, timeout=60, **kwargs)
+        self.pipeline = self.client.pipeline()
 
     @quiet
     def create(self, key, doc, ttl=None):

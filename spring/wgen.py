@@ -112,8 +112,13 @@ class KVWorker(Worker):
                 key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
                 doc = self.docs.next(key)
                 cmds.append((self.cb.cas, (key, doc)))
-        for cmd, args in cmds:
-            cmd(*args)
+        if self.ws.workers == 1:  # Use pipeline only for one worker, otherwise
+            with self.cb.pipeline:  # performance regresses
+                for cmd, args in cmds:
+                    cmd(*args)
+        else:
+            for cmd, args in cmds:
+                cmd(*args)
 
     def run(self, sid, lock, curr_ops, curr_items, deleted_items):
         if self.ws.throughput < float('inf'):
