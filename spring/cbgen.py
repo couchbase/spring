@@ -2,6 +2,7 @@ from couchbase.exceptions import (ConnectError,
                                   CouchbaseError,
                                   HTTPError,
                                   KeyExistsError,
+                                  NotFoundError,
                                   TemporaryFailError,
                                   TimeoutError,
                                   )
@@ -16,14 +17,14 @@ def quiet(method, *args, **kwargs):
     try:
         return method(*args, **kwargs)
     except (ConnectError, CouchbaseError, HTTPError, KeyExistsError,
-            TemporaryFailError, TimeoutError) as e:
+            NotFoundError, TemporaryFailError, TimeoutError) as e:
         logger.warn(e)
 
 
 class CBGen(object):
 
     def __init__(self, **kwargs):
-        self.client = Connection(quiet=True, timeout=60, **kwargs)
+        self.client = Connection(timeout=60, **kwargs)
         self.pipeline = self.client.pipeline()
 
     @quiet
