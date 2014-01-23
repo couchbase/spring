@@ -174,10 +174,10 @@ class WorkerFactory(object):
 class QueryWorker(Worker):
 
     def __init__(self, workload_settings, target_settings, shutdown_event,
-                 ddocs):
+                 ddocs, params):
         super(QueryWorker, self).__init__(workload_settings, target_settings,
                                           shutdown_event)
-        self.new_queries = NewQuery(ddocs)
+        self.new_queries = NewQuery(ddocs, params)
 
     @with_sleep
     def do_batch(self):
@@ -216,11 +216,12 @@ class QueryWorker(Worker):
 class WorkloadGen(object):
 
     def __init__(self, workload_settings, target_settings, shutdown_event=None,
-                 ddocs=None):
+                 ddocs=None, qparams={}):
         self.ws = workload_settings
         self.ts = target_settings
         self.shutdown_event = shutdown_event
         self.ddocs = ddocs
+        self.qparams = qparams
 
     def start_kv_workers(self, curr_items, deleted_items):
         curr_ops = Value('i', 0)
@@ -244,7 +245,7 @@ class WorkloadGen(object):
         self.query_workers = list()
         for sid in range(self.ws.query_workers):
             worker = QueryWorker(self.ws, self.ts, self.shutdown_event,
-                                 self.ddocs)
+                                 self.ddocs, self.qparams)
             worker_process = Process(
                 target=worker.run,
                 args=(sid, lock, curr_queries, curr_items, deleted_items)

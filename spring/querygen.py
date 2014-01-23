@@ -6,7 +6,10 @@ from couchbase.views.params import Query
 
 class NewQuery(object):
 
-    LIMIT = 30
+    PARAMS = {
+        'limit': 30,
+        'stale': 'update_after',
+    }
 
     QUERIES_PER_VIEW = {
         'id_by_city': 9,
@@ -21,7 +24,9 @@ class NewQuery(object):
         'experts_coins_by_name': 9,
     }
 
-    def __init__(self, ddocs):
+    def __init__(self, ddocs, params):
+        self.params = dict(self.PARAMS, **params)
+
         self.view_sequence = []
         for ddoc_name, ddoc in ddocs.iteritems():
             for view_name in ddoc['views']:
@@ -75,4 +80,5 @@ class NewQuery(object):
     def next(self, doc):
         ddoc_name, view_name = self.view_sequence.next()
         params = self.generate_params(**doc)[view_name]
-        return ddoc_name, view_name, Query(limit=self.LIMIT, **params)
+        params = dict(self.params, **params)
+        return ddoc_name, view_name, Query(**params)
