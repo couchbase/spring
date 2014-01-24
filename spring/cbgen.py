@@ -18,7 +18,7 @@ def quiet(method, *args, **kwargs):
         return method(*args, **kwargs)
     except (ConnectError, CouchbaseError, HTTPError, KeyExistsError,
             NotFoundError, TemporaryFailError, TimeoutError) as e:
-        logger.warn(e)
+        logger.warn('{}: {}'.format(method, e))
 
 
 class CBGen(object):
