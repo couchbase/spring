@@ -82,13 +82,16 @@ class KVWorker(Worker):
     @with_sleep
     def do_batch(self):
         curr_items_tmp = self.curr_items.value
-        deleted_items_tmp = self.deleted_items.value
         if self.ws.creates:
             with self.lock:
                 self.curr_items.value += self.ws.creates
+
+        deleted_items_tmp = deleted_spot = 0
         if self.ws.deletes:
             with self.lock:
                 self.deleted_items.value += self.ws.deletes
+                deleted_items_tmp = self.deleted_items.value - self.ws.deletes
+            deleted_spot = deleted_items_tmp + self.ws.deletes * self.ws.workers
 
         cmds = []
         for op in self.gen_sequence():
@@ -98,10 +101,10 @@ class KVWorker(Worker):
                 doc = self.docs.next(key)
                 cmds.append((self.cb.create, (key, doc, ttl)))
             elif op == 'r':
-                key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
+                key = self.existing_keys.next(curr_items_tmp, deleted_spot)
                 cmds.append((self.cb.read, (key, )))
             elif op == 'u':
-                key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
+                key = self.existing_keys.next(curr_items_tmp, deleted_spot)
                 doc = self.docs.next(key)
                 cmds.append((self.cb.update, (key, doc)))
             elif op == 'd':
@@ -109,7 +112,7 @@ class KVWorker(Worker):
                 key = self.keys_for_removal.next(deleted_items_tmp)
                 cmds.append((self.cb.delete, (key, )))
             elif op == 'cas':
-                key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
+                key = self.existing_keys.next(curr_items_tmp, deleted_spot)
                 doc = self.docs.next(key)
                 cmds.append((self.cb.cas, (key, doc)))
         if self.ws.workers == 1:  # Use pipeline only for one worker, otherwise
@@ -182,10 +185,11 @@ class QueryWorker(Worker):
     @with_sleep
     def do_batch(self):
         curr_items_tmp = self.curr_items.value
-        deleted_items_tmp = self.deleted_items.value
+        deleted_spot = \
+            self.deleted_items.value + self.ws.deletes * self.ws.workers
 
         for _ in xrange(self.BATCH_SIZE):
-            key = self.existing_keys.next(curr_items_tmp, deleted_items_tmp)
+            key = self.existing_keys.next(curr_items_tmp, deleted_spot)
             doc = self.docs.next(key)
             ddoc_name, view_name, query = self.new_queries.next(doc)
             self.cb.query(ddoc_name, view_name, query=query)
