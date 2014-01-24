@@ -24,7 +24,7 @@ def quiet(method, *args, **kwargs):
 class CBGen(object):
 
     def __init__(self, **kwargs):
-        self.client = Connection(timeout=60, **kwargs)
+        self.client = Connection(timeout=60, quiet=True, **kwargs)
         self.pipeline = self.client.pipeline()
 
     @quiet
