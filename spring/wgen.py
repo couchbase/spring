@@ -1,30 +1,16 @@
 import time
 from multiprocessing import Process, Value, Lock
 
+from decorator import decorator
 from numpy import random
 from couchbase.exceptions import ValueFormatError
 from logger import logger
+from twisted.internet import reactor
 
-from spring.cbgen import CBGen
+from spring.cbgen import CBGen, CBAsyncGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
                            NewKey, NewDocument)
 from spring.querygen import NewQuery
-
-
-def with_sleep(method):
-
-    CORRECTION_FACTOR = 0.975  # empiric!
-
-    def wrapper(self, *args, **kwargs):
-        if self.target_time is None:
-            return method(self, *args, **kwargs)
-        else:
-            t0 = time.time()
-            method(self, *args, **kwargs)
-            actual_time = time.time() - t0
-            if actual_time < self.target_time:
-                time.sleep(CORRECTION_FACTOR * (self.target_time - actual_time))
-    return wrapper
 
 
 class Worker(object):
@@ -69,6 +55,10 @@ class Worker(object):
 
 class KVWorker(Worker):
 
+    CORRECTION_FACTOR = 0.975  # empiric!
+
+    NUM_CONNECTIONS = 8
+
     def gen_sequence(self):
         ops = \
             ['c'] * self.ws.creates + \
@@ -79,8 +69,34 @@ class KVWorker(Worker):
         random.shuffle(ops)
         return ops
 
-    @with_sleep
-    def do_batch(self):
+    def init_db(self, params):
+        self.cbs = [CBAsyncGen(**params) for _ in range(self.NUM_CONNECTIONS)]
+        self.counter = range(self.NUM_CONNECTIONS)
+
+    def restart(self, _, cb, i):
+        self.counter[i] += 1
+        if self.counter[i] == self.BATCH_SIZE:
+            actual_time = time.time() - self.time_started
+            if self.target_time is not None:
+                delta = self.target_time - actual_time
+                if delta > 0:
+                    time.sleep(self.CORRECTION_FACTOR * delta)
+
+            self.report_progress(self.curr_ops.value)
+            if not self.done and (self.curr_ops.value >= self.ws.ops or self.time_to_stop()):
+                with self.lock:
+                    self.done = True
+                reactor.stop()
+            else:
+                self.do_batch(_, cb, i)
+
+    def do_batch(self, _, cb, i):
+        self.counter[i] = 0
+        self.time_started = time.time()
+
+        with self.lock:
+            self.curr_ops.value += self.BATCH_SIZE
+
         curr_items_tmp = curr_items_spot = self.curr_items.value
         if self.ws.creates:
             with self.lock:
@@ -101,62 +117,67 @@ class KVWorker(Worker):
                 curr_items_tmp += 1
                 key, ttl = self.new_keys.next(curr_items_tmp)
                 doc = self.docs.next(key)
-                cmds.append((self.cb.create, (key, doc, ttl)))
+                cmds.append((cb.create, (key, doc, ttl)))
             elif op == 'r':
                 key = self.existing_keys.next(curr_items_spot, deleted_spot)
-                cmds.append((self.cb.read, (key, )))
+                cmds.append((cb.read, (key, )))
             elif op == 'u':
                 key = self.existing_keys.next(curr_items_spot, deleted_spot)
                 doc = self.docs.next(key)
-                cmds.append((self.cb.update, (key, doc)))
+                cmds.append((cb.update, (key, doc)))
             elif op == 'd':
                 deleted_items_tmp += 1
                 key = self.keys_for_removal.next(deleted_items_tmp)
-                cmds.append((self.cb.delete, (key, )))
+                cmds.append((cb.delete, (key, )))
             elif op == 'cas':
                 key = self.existing_keys.next(curr_items_spot, deleted_spot)
                 doc = self.docs.next(key)
-                cmds.append((self.cb.cas, (key, doc)))
-        if self.ws.workers == 1:  # Use pipeline only for one worker, otherwise
-            with self.cb.pipeline:  # performance regresses
-                for cmd, args in cmds:
-                    cmd(*args)
-        else:
-            for cmd, args in cmds:
-                cmd(*args)
+                cmds.append((cb.cas, (key, doc)))
+        for cmd, args in cmds:
+            d = cmd(*args)
+            d.addCallback(self.restart, cb, i)
+            d.addErrback(self.log_and_restart, cb, i)
+
+    def log_and_restart(self, err, cb, i):
+        logger.warn("Request problem with thread-{}: {}".format(i, err.value))
+        self.restart(None, cb, i)
+
+    def error(self, err, cb, i):
+        logger.warn("Conn problem with thread-{}: {}".format(i, err.value))
+
+        cb.client._close()
+        time.sleep(15)
+        d = cb.client.connect()
+        d.addCallback(self.do_batch, cb, i)
+        d.addErrback(self.error, cb, i)
 
     def run(self, sid, lock, curr_ops, curr_items, deleted_items):
         if self.ws.throughput < float('inf'):
-            self.target_time = float(self.BATCH_SIZE) * self.ws.workers / \
-                self.ws.throughput
+            self.target_time = self.BATCH_SIZE * self.ws.workers / float(self.ws.throughput)
         else:
             self.target_time = None
         self.sid = sid
         self.lock = lock
         self.curr_items = curr_items
         self.deleted_items = deleted_items
+        self.curr_ops = curr_ops
 
-        logger.info('Started: worker-{}'.format(self.sid))
-        try:
-            while curr_ops.value < self.ws.ops and not self.time_to_stop():
-                with lock:
-                    curr_ops.value += self.BATCH_SIZE
-                self.do_batch()
-                self.report_progress(curr_ops.value)
-        except (KeyboardInterrupt, ValueFormatError):
-            logger.info('Interrupted: worker-{}'.format(self.sid))
-        else:
-            logger.info('Finished: worker-{}'.format(self.sid))
+        self.done = False
+        for i, cb in enumerate(self.cbs):
+            d = cb.client.connect()
+            d.addCallback(self.do_batch, cb, i)
+            d.addErrback(self.error, cb, i)
+        reactor.run()
 
 
-class SeqReadsWorker(KVWorker):
+class SeqReadsWorker(Worker):
 
     def run(self, sid, *args, **kwargs):
         for key in SequentialHotKey(sid, self.ws, self.ts.prefix):
             self.cb.read(key)
 
 
-class SeqUpdatesWorker(KVWorker):
+class SeqUpdatesWorker(Worker):
 
     def run(self, sid, *args, **kwargs):
         for key in SequentialHotKey(sid, self.ws, self.ts.prefix):
@@ -174,6 +195,19 @@ class WorkerFactory(object):
             return SeqReadsWorker
         if not (seq_updates or seq_reads):
             return KVWorker
+
+
+@decorator
+def with_sleep(method, self, *args, **kwargs):
+
+    if self.target_time is None:
+        return method(self, *args, **kwargs)
+    else:
+        t0 = time.time()
+        method(self, *args, **kwargs)
+        actual_time = time.time() - t0
+        if actual_time < self.target_time:
+            time.sleep(self.target_time - actual_time)
 
 
 class QueryWorker(Worker):

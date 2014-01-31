@@ -18,5 +18,6 @@ setup(
         'decorator',
         'logger',
         'numpy',
+        'twisted==10.0.0',
     ]
 )

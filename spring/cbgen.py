@@ -1,3 +1,5 @@
+from couchbase import experimental
+experimental.enable()
 from couchbase.exceptions import (ConnectError,
                                   CouchbaseError,
                                   HTTPError,
@@ -7,6 +9,7 @@ from couchbase.exceptions import (ConnectError,
                                   TimeoutError,
                                   )
 from couchbase.connection import Connection
+from txcouchbase.connection import Connection as TxConnection
 
 from decorator import decorator
 from logger import logger
@@ -21,35 +24,55 @@ def quiet(method, *args, **kwargs):
         logger.warn('{}: {}'.format(method, e))
 
 
-class CBGen(object):
+class CBAsyncGen(object):
 
     def __init__(self, **kwargs):
-        self.client = Connection(timeout=60, quiet=True, **kwargs)
-        self.pipeline = self.client.pipeline()
+        self.client = TxConnection(quiet=True, timeout=60, **kwargs)
 
-    @quiet
     def create(self, key, doc, ttl=None):
         extra_params = {}
         if ttl is None:
             extra_params['ttl'] = ttl
         return self.client.set(key, doc, **extra_params)
 
-    @quiet
     def read(self, key):
         return self.client.get(key)
 
-    @quiet
     def update(self, key, doc):
         return self.client.set(key, doc)
 
-    @quiet
     def cas(self, key, doc):
         cas = self.client.get(key).cas
         return self.client.set(key, doc, cas=cas)
 
-    @quiet
     def delete(self, key):
         return self.client.delete(key)
+
+
+class CBGen(CBAsyncGen):
+
+    def __init__(self, **kwargs):
+        self.client = Connection(timeout=60, quiet=True, **kwargs)
+
+    @quiet
+    def create(self, *args, **kwargs):
+        super(CBGen, self).create(*args, **kwargs)
+
+    @quiet
+    def read(self, *args, **kwargs):
+        super(CBGen, self).read(*args, **kwargs)
+
+    @quiet
+    def update(self, *args, **kwargs):
+        super(CBGen, self).update(*args, **kwargs)
+
+    @quiet
+    def cas(self, *args, **kwargs):
+        super(CBGen, self).cas(*args, **kwargs)
+
+    @quiet
+    def delete(self, *args, **kwargs):
+        super(CBGen, self).delete(*args, **kwargs)
 
     @quiet
     def query(self, ddoc, view, query):
