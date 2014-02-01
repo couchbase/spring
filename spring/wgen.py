@@ -1,5 +1,5 @@
 import time
-from multiprocessing import Process, Value, Lock
+from multiprocessing import Process, Value, Lock, Event
 
 from numpy import random
 from couchbase.exceptions import ValueFormatError
@@ -222,11 +222,13 @@ class QueryWorker(Worker):
 
 class WorkloadGen(object):
 
-    def __init__(self, workload_settings, target_settings, shutdown_event=None,
+    def __init__(self, workload_settings, target_settings, timer=None,
                  ddocs=None, qparams={}):
         self.ws = workload_settings
         self.ts = target_settings
-        self.shutdown_event = shutdown_event
+        self.timer = timer
+        self.shutdown_event = timer and Event() or None
+
         self.ddocs = ddocs
         self.qparams = qparams
 
@@ -273,5 +275,8 @@ class WorkloadGen(object):
         self.start_kv_workers(curr_items, deleted_items)
         self.start_query_workers(curr_items, deleted_items)
 
+        if self.timer:
+            time.sleep(self.timer)
+            self.shutdown_event.set()
         self.wait_for_workers(self.kv_workers)
         self.wait_for_workers(self.query_workers)
