@@ -18,5 +18,6 @@ setup(
         'decorator',
         'logger',
         'numpy',
+        'requests==2.1.0',
     ]
 )

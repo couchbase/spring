@@ -2,3 +2,4 @@ couchbase==1.2.0
 decorator
 logger
 numpy
+requests==2.1.0

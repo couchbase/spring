@@ -1,3 +1,6 @@
+from random import choice
+
+import requests
 from couchbase.exceptions import (ConnectError,
                                   CouchbaseError,
                                   HTTPError,
@@ -7,7 +10,6 @@ from couchbase.exceptions import (ConnectError,
                                   TimeoutError,
                                   )
 from couchbase.connection import Connection
-
 from decorator import decorator
 from logger import logger
 
@@ -26,6 +28,8 @@ class CBGen(object):
     def __init__(self, **kwargs):
         self.client = Connection(timeout=60, quiet=True, **kwargs)
         self.pipeline = self.client.pipeline()
+        self.session = requests.Session()
+        self.session.auth = (kwargs['username'], kwargs['password'])
 
     @quiet
     def create(self, key, doc, ttl=None):
@@ -51,6 +55,14 @@ class CBGen(object):
     def delete(self, key):
         return self.client.delete(key)
 
-    @quiet
     def query(self, ddoc, view, query):
+        node = choice(self.client.server_nodes).replace("8091", "8092")
+        url = "http://{}/{}/_design/{}/_view/{}?{}".format(
+            node, self.client.bucket, ddoc, view, query.encoded
+        )
+        resp = self.session.get(url=url)
+        return resp.text
+
+    @quiet
+    def lcb_query(self, ddoc, view, query):
         return tuple(self.client.query(ddoc, view, query=query))
