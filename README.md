@@ -61,8 +61,13 @@ Perform 1K mixed (read/update) operations:
 
 Infinite read loop using 8 workers:
 
-        spring -r 100 -i 2000 -w 8
+        spring -r 100 -i 2000 -n 8
 
 Delete 2K items:
 
         spring -d 100 -o 2000
+
+
+Running in asynchronous mode:
+
+        spring -r 100 -i 2000 --async

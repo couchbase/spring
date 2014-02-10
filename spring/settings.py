@@ -10,7 +10,7 @@ class WorkloadSettings(object):
         self.reads = options.reads
         self.updates = options.updates
         self.deletes = options.deletes
-        self.cases = options.cases
+        self.cases = 0  # Stub for library compatibility
 
         self.ops = options.ops
         self.throughput = options.throughput
@@ -22,10 +22,9 @@ class WorkloadSettings(object):
         self.working_set_access = options.working_set_access
 
         self.workers = options.workers
-        self.query_workers = options.query_workers
+        self.query_workers = 0  # Stub for library compatibility
 
-        self.seq_reads = options.seq_reads
-        self.seq_updates = options.seq_updates
+        self.async = options.async
 
 
 class TargetSettings(object):

@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 
-
 from spring.settings import WorkloadSettings, TargetSettings
 from spring.version import VERSION
 from spring.wgen import WorkloadGen
@@ -74,6 +73,8 @@ class CLIParser(ArgumentParser):
             '-n', dest='workers', type=int, default=1, metavar='',
             help='number of workers (1 by default)'
         )
+        self.add_argument('--async', action='store_true', default=False,
+                          help='enable asynchronous mode')
 
     def parse_args(self, *args):
         args = super(CLIParser, self).parse_args()
@@ -102,10 +103,6 @@ class CLIParser(ArgumentParser):
 def main():
     parser = CLIParser()
     args = parser.parse_args()
-    args.seq_reads = False
-    args.seq_updates = False
-    args.cases = 0
-    args.query_workers = 0
 
     ws = WorkloadSettings(args)
     ts = TargetSettings(args.uri)
