@@ -34,7 +34,8 @@ class ExistingKey(Iterator):
         num_cold_items = num_existing_items - num_hot_items
 
         left_limit = 1 + curr_deletes
-        if random.randint(0, 100) <= self.working_set_access:
+        if self.working_set_access == 100 or \
+                random.randint(0, 100) <= self.working_set_access:
             left_limit += num_cold_items
             right_limit = curr_items
         else:
