@@ -42,7 +42,7 @@ class ExistingKey(Iterator):
             right_limit = curr_items
         else:
             right_limit = left_limit + num_cold_items
-        key = random.randint(left_limit, right_limit)
+        key = np.random.random_integers(left_limit, right_limit)
         key = 'key-%d' % key
         return self.add_prefix(key)
 
