@@ -1,0 +1,2 @@
+recursive-include src *.c
+exclude MANIFEST.in

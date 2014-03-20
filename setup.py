@@ -1,6 +1,8 @@
-from setuptools import setup
+from setuptools import setup, Extension
 
 from spring.version import VERSION
+
+fastdocgen = Extension('fastdocgen', sources=['src/fastdocgen.c'])
 
 
 setup(
@@ -20,5 +22,8 @@ setup(
         'numpy',
         'requests==2.1.0',
         'twisted==10.0.0',
-    ]
+    ],
+    ext_modules=[
+        fastdocgen
+    ],
 )

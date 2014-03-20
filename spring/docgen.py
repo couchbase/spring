@@ -5,6 +5,8 @@ from itertools import cycle
 import random
 import numpy as np
 
+from fastdocgen import build_achievements
+
 
 class Iterator(object):
 
@@ -133,13 +135,7 @@ class NewDocument(Iterator):
 
     @staticmethod
     def _build_achievements(alphabet):
-        achievement = 256
-        achievements = []
-        for i, char in enumerate(alphabet[42:58]):
-            achievement = (achievement + int(char, 16) * i) % 512
-            if achievement < 256:
-                achievements.append(achievement)
-        return achievements
+        return build_achievements(alphabet)
 
     @staticmethod
     def _build_body(alphabet, length):
