@@ -16,7 +16,7 @@ class Iterator(object):
 
     def add_prefix(self, key):
         if self.prefix:
-            return '{}-{}'.format(self.prefix, key)
+            return '%s-%s' % (self.prefix, key)
         else:
             return key
 
@@ -40,7 +40,8 @@ class ExistingKey(Iterator):
             right_limit = curr_items
         else:
             right_limit = left_limit + num_cold_items
-        key = 'key-{}'.format(random.randint(left_limit, right_limit))
+        key = random.randint(left_limit, right_limit)
+        key = 'key-%d' % key
         return self.add_prefix(key)
 
 
@@ -59,7 +60,7 @@ class SequentialHotKey(Iterator):
         right_limit = left_limit + keys_per_worker
 
         for seq_id in range(left_limit, right_limit):
-            key = 'key-{}'.format(seq_id)
+            key = 'key-%d' % seq_id
             key = self.add_prefix(key)
             yield key
 
@@ -72,7 +73,7 @@ class NewKey(Iterator):
         self.ttls = cycle(range(150, 450, 30))
 
     def next(self, curr_items):
-        key = 'key-{}'.format(curr_items)
+        key = 'key-%d' % curr_items
         key = self.add_prefix(key)
         ttl = None
         if self.expiration and random.randint(1, 100) <= self.expiration:
@@ -86,7 +87,7 @@ class KeyForRemoval(Iterator):
         self.prefix = prefix
 
     def next(self, curr_deletes):
-        key = 'key-{}'.format(curr_deletes)
+        key = 'key-%d' % curr_deletes
         return self.add_prefix(key)
 
 
@@ -108,11 +109,11 @@ class NewDocument(Iterator):
 
     @staticmethod
     def _build_name(alphabet):
-        return '{} {}'.format(alphabet[:6], alphabet[6:12])
+        return '%s %s' % (alphabet[:6], alphabet[6:12])
 
     @staticmethod
     def _build_email(alphabet):
-        return '{}@{}.com'.format(alphabet[12:18], alphabet[18:24])
+        return '%s@%s.com' % (alphabet[12:18], alphabet[18:24])
 
     @staticmethod
     def _build_city(alphabet):
