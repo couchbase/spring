@@ -10,6 +10,9 @@ bench: ; \
     python benchmark.py; \
     gprof2dot -f pstats benchmark.prof | dot -Tsvg -o benchmark.svg
 
+pep8: ; \
+    pep8 --ignore E501 spring tests.py benchmark.py
+
 clean: ; \
     rm -fr build dist spring.egg-info fastdocgen.so benchmark.prof benchmark.svg
 
