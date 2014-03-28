@@ -312,7 +312,7 @@ class WorkloadGen(object):
         self.qparams = qparams
 
     def start_kv_workers(self, curr_items, deleted_items):
-        curr_ops = Value('i', 0)
+        curr_ops = Value('L', 0)
         lock = Lock()
 
         worker_type = WorkerFactory(self.ws)
@@ -329,7 +329,7 @@ class WorkloadGen(object):
                 time.sleep(2)
 
     def start_query_workers(self, curr_items, deleted_items):
-        curr_queries = Value('i', 0)
+        curr_queries = Value('L', 0)
         lock = Lock()
 
         self.query_workers = list()
@@ -350,8 +350,8 @@ class WorkloadGen(object):
                 logger.interrupt('Worker finished with non-zero exit code')
 
     def run(self):
-        curr_items = Value('i', self.ws.items)
-        deleted_items = Value('i', 0)
+        curr_items = Value('L', self.ws.items)
+        deleted_items = Value('L', 0)
 
         self.start_kv_workers(curr_items, deleted_items)
         self.start_query_workers(curr_items, deleted_items)
