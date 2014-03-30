@@ -29,7 +29,7 @@ class WorkloadSettings(object):
 
 class TargetSettings(object):
 
-    def __init__(self, target_uri):
+    def __init__(self, target_uri, prefix):
         params = urlparse(target_uri)
         if not params.hostname or not params.port or not params.path:
             logger.interrupt('Invalid connection URI')
@@ -38,4 +38,4 @@ class TargetSettings(object):
         self.bucket = params.path[1:]
         self.username = params.username or ''
         self.password = params.password or ''
-        self.prefix = None
+        self.prefix = prefix

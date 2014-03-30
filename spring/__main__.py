@@ -58,6 +58,10 @@ class CLIParser(ArgumentParser):
             help='average value size in bytes (2048 by default)'
         )
         self.add_argument(
+            '-p', dest='prefix', type=str, default='', metavar='',
+            help='key prefix (no prefix by default)'
+        )
+        self.add_argument(
             '-i', dest='items', type=int, default=0, metavar='',
             help='number of existing items (0 by default)',
         )
@@ -105,7 +109,7 @@ def main():
     args = parser.parse_args()
 
     ws = WorkloadSettings(args)
-    ts = TargetSettings(args.uri)
+    ts = TargetSettings(args.uri, args.prefix)
     wg = WorkloadGen(ws, ts)
     wg.run()
 
