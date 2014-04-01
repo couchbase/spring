@@ -1,9 +1,13 @@
 import math
+import time
+from collections import OrderedDict
 from hashlib import md5
 from itertools import cycle
 
 import random
 import numpy as np
+
+from spring.states import STATES
 
 from fastdocgen import build_achievements
 
@@ -126,8 +130,43 @@ class NewDocument(Iterator):
         return alphabet[30:36]
 
     @staticmethod
+    def _build_country(alphabet):
+        return alphabet[42:48]
+
+    @staticmethod
+    def _build_county(alphabet):
+        return alphabet[48:54]
+
+    @staticmethod
+    def _build_street(alphabet):
+        return alphabet[54:62]
+
+    @staticmethod
     def _build_coins(alphabet):
         return max(0.1, int(alphabet[36:40], 16) / 100.0)
+
+    @staticmethod
+    def _build_gmtime(alphabet):
+        days = 24 * 3600 * (int(alphabet[63], 16) % 12)
+        return list(time.gmtime(days * 365 + 31 * days))
+
+    @staticmethod
+    def _build_year(alphabet):
+        return 1985 + int(alphabet[62], 32)
+
+    @staticmethod
+    def _build_state(alphabet):
+        for c in '0123456789abcdef':
+            if c in alphabet:
+                idx = len(STATES) - alphabet.index(c) - 1
+                return STATES[idx][0]
+
+    @staticmethod
+    def _build_full_state(alphabet):
+        for c in '0123456789abcdef':
+            if c in alphabet:
+                idx = alphabet.index(c) % len(STATES)
+                return STATES[idx][1]
 
     @staticmethod
     def _build_category(alphabet):
@@ -157,4 +196,72 @@ class NewDocument(Iterator):
             'achievements': self._build_achievements(alphabet),
             'body': self._build_body(alphabet, next_length)
         }
+        return doc
+
+
+class NewNestedDocument(NewDocument):
+
+    TEMPLATE = OrderedDict((
+        ('name', {'f': {'f': {'f': None}}}),
+        ('email', {'f': {'f': None}}),
+        ('street', {'f': {'f': None}}),
+        ('city', {'f': {'f': None}}),
+        ('county', {'f': {'f': None}}),
+        ('state', {'f': None}),
+        ('full_state', {'f': None}),
+        ('country', {'f': None}),
+        ('realm', {'f': None}),
+        ('coins', {'f': None}),
+        ('category', None),
+        ('achievements', None),
+        ('gmtime', None),
+        ('year', None),
+        ('body', None),
+    ))
+
+    L1 = 15
+    L2 = 10
+    L3 = 5
+    L4 = 1
+
+    OVERHEAD = 450
+    SIZE_VARIATION = 0.25
+
+    def _values(self, alphabet, next_length):
+        for method, args in (
+            (self._build_name, (alphabet, )),
+            (self._build_email, (alphabet, )),
+            (self._build_street, (alphabet, )),
+            (self._build_city, (alphabet, )),
+            (self._build_county, (alphabet, )),
+            (self._build_state, (alphabet, )),
+            (self._build_full_state, (alphabet, )),
+            (self._build_country, (alphabet, )),
+            (self._build_realm, (alphabet, )),
+            (self._build_coins, (alphabet, )),
+            (self._build_category, (alphabet, )),
+            (self._build_achievements, (alphabet, )),
+            (self._build_gmtime, (alphabet, )),
+            (self._build_year, (alphabet, )),
+            (self._build_body, (alphabet, next_length))
+        ):
+            yield method(*args)
+
+    def _size(self):
+        return self._get_variation_coeff() * (self.avg_size - self.OVERHEAD)
+
+    def next(self, key):
+        alphabet = self._build_alphabet(key)
+        field_values = self._values(alphabet, self._size())
+        field_names = (name for name in self.TEMPLATE)
+
+        doc = self.TEMPLATE.copy()
+        for i in range(self.L4):
+            doc[field_names.next()]['f']['f']['f'] = field_values.next()
+        for i in range(self.L4, self.L3):
+            doc[field_names.next()]['f']['f'] = field_values.next()
+        for i in range(self.L3, self.L2):
+            doc[field_names.next()]['f'] = field_values.next()
+        for i in range(self.L2, self.L1):
+            doc[field_names.next()] = field_values.next()
         return doc

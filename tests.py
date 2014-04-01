@@ -1,4 +1,7 @@
+import json
 import unittest
+
+from spring.docgen import NewNestedDocument
 
 from fastdocgen import build_achievements
 
@@ -21,6 +24,25 @@ class FastDocGenTest(unittest.TestCase):
         py = py_build_achievements(self.ALPHABET)
         c = build_achievements(self.ALPHABET)
         self.assertEqual(py, c)
+
+
+class NestedDocTest(unittest.TestCase):
+
+    SIZE = 2048
+
+    def test_doc_size(self):
+        docgen = NewNestedDocument(avg_size=self.SIZE)
+        variation = self.SIZE * NewNestedDocument.SIZE_VARIATION
+        for i in range(1000):
+            doc = docgen.next(key='key-{}'.format(i))
+            size = len(json.dumps(doc))
+            self.assertAlmostEqual(size, self.SIZE, delta=variation)
+
+    def test_determenistic(self):
+        docgen = NewNestedDocument(avg_size=0)
+        d1 = docgen.next(key='mykey')
+        d2 = docgen.next(key='mykey')
+        self.assertEqual(d1, d2)
 
 
 if __name__ == '__main__':
