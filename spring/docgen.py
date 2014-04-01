@@ -1,13 +1,12 @@
 import math
 import time
-from collections import OrderedDict
 from hashlib import md5
 from itertools import cycle
 
 import random
 import numpy as np
 
-from spring.states import STATES
+from spring.states import STATES, NUM_STATES
 
 from fastdocgen import build_achievements
 
@@ -65,7 +64,7 @@ class SequentialHotKey(Iterator):
         left_limit = 1 + num_cold_items + self.sid * keys_per_worker
         right_limit = left_limit + keys_per_worker
 
-        for seq_id in range(left_limit, right_limit):
+        for seq_id in xrange(left_limit, right_limit):
             key = 'key-%d' % seq_id
             key = self.add_prefix(key)
             yield key
@@ -148,7 +147,7 @@ class NewDocument(Iterator):
     @staticmethod
     def _build_gmtime(alphabet):
         days = 24 * 3600 * (int(alphabet[63], 16) % 12)
-        return list(time.gmtime(days * 365 + 31 * days))
+        return tuple(time.gmtime(days * 396))
 
     @staticmethod
     def _build_year(alphabet):
@@ -156,17 +155,13 @@ class NewDocument(Iterator):
 
     @staticmethod
     def _build_state(alphabet):
-        for c in '0123456789abcdef':
-            if c in alphabet:
-                idx = len(STATES) - alphabet.index(c) - 1
-                return STATES[idx][0]
+        idx = alphabet.find('7') % NUM_STATES
+        return STATES[idx][0]
 
     @staticmethod
     def _build_full_state(alphabet):
-        for c in '0123456789abcdef':
-            if c in alphabet:
-                idx = alphabet.index(c) % len(STATES)
-                return STATES[idx][1]
+        idx = alphabet.find('8') % NUM_STATES
+        return STATES[idx][1]
 
     @staticmethod
     def _build_category(alphabet):
@@ -201,23 +196,27 @@ class NewDocument(Iterator):
 
 class NewNestedDocument(NewDocument):
 
-    TEMPLATE = OrderedDict((
-        ('name', {'f': {'f': {'f': None}}}),
-        ('email', {'f': {'f': None}}),
-        ('street', {'f': {'f': None}}),
-        ('city', {'f': {'f': None}}),
-        ('county', {'f': {'f': None}}),
-        ('state', {'f': None}),
-        ('full_state', {'f': None}),
-        ('country', {'f': None}),
-        ('realm', {'f': None}),
-        ('coins', {'f': None}),
-        ('category', None),
-        ('achievements', None),
-        ('gmtime', None),
-        ('year', None),
-        ('body', None),
-    ))
+    TEMPLATE = {
+        'name': {'f': {'f': {'f': None}}},
+        'email': {'f': {'f': None}},
+        'street': {'f': {'f': None}},
+        'city': {'f': {'f': None}},
+        'county': {'f': {'f': None}},
+        'state': {'f': None},
+        'full_state': {'f': None},
+        'country': {'f': None},
+        'realm': {'f': None},
+        'coins': {'f': None},
+        'category': None,
+        'achievements': None,
+        'gmtime': None,
+        'year': None,
+        'body': None,
+    }
+
+    NAMES = ('name', 'email', 'street', 'city', 'county', 'state', 'full_state',
+             'country', 'realm', 'coins', 'category', 'achievements', 'gmtime',
+             'year', 'body')
 
     L1 = 15
     L2 = 10
@@ -253,15 +252,14 @@ class NewNestedDocument(NewDocument):
     def next(self, key):
         alphabet = self._build_alphabet(key)
         field_values = self._values(alphabet, self._size())
-        field_names = (name for name in self.TEMPLATE)
 
-        doc = self.TEMPLATE.copy()
-        for i in range(self.L4):
-            doc[field_names.next()]['f']['f']['f'] = field_values.next()
-        for i in range(self.L4, self.L3):
-            doc[field_names.next()]['f']['f'] = field_values.next()
-        for i in range(self.L3, self.L2):
-            doc[field_names.next()]['f'] = field_values.next()
-        for i in range(self.L2, self.L1):
-            doc[field_names.next()] = field_values.next()
+        doc = dict(**self.TEMPLATE)
+        for i in xrange(self.L4):
+            doc[self.NAMES[i]]['f']['f']['f'] = field_values.next()
+        for i in xrange(self.L4, self.L3):
+            doc[self.NAMES[i]]['f']['f'] = field_values.next()
+        for i in xrange(self.L3, self.L2):
+            doc[self.NAMES[i]]['f'] = field_values.next()
+        for i in xrange(self.L2, self.L1):
+            doc[self.NAMES[i]] = field_values.next()
         return doc

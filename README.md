@@ -67,7 +67,24 @@ Delete 2K items:
 
         spring -d 100 -o 2000
 
-
 Running in asynchronous mode:
 
         spring -r 100 -i 2000 --async
+
+Running benchmarks
+------------------
+
+First of all install gprof2dot:
+
+        pip install gprof2dot
+
+Then run one of benchmarks:
+
+        ./benchmark_docs.py && gprof2dot -f pstats profile.prof | dot -Tsvg -o profile.svg
+
+Running unit tests
+------------------
+
+After nose installation:
+
+        nosetests -v tests.py

@@ -57,3 +57,5 @@ STATES = (
     ('WV', 'West Virginia'),
     ('WY', 'Wyoming'),
 )
+
+NUM_STATES = len(STATES)

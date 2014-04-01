@@ -72,8 +72,7 @@ def profile():
     ps = pstats.Stats(pr, stream=s).sort_stats('tottime')
     ps.reverse_order()
     ps.print_stats()
-    ps.dump_stats('benchmark.prof')
-    print s.getvalue()
+    ps.dump_stats('profile.prof')
 
 
 if __name__ == '__main__':
