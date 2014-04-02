@@ -223,8 +223,7 @@ class NewNestedDocument(NewDocument):
     L3 = 5
     L4 = 1
 
-    OVERHEAD = 450
-    SIZE_VARIATION = 0.25
+    OVERHEAD = 450  # Minimum size due to fixed fields, body size is variable
 
     def _values(self, alphabet, next_length):
         for method, args in (
@@ -247,7 +246,13 @@ class NewNestedDocument(NewDocument):
             yield method(*args)
 
     def _size(self):
-        return self._get_variation_coeff() * (self.avg_size - self.OVERHEAD)
+        if random.random() < 0.975:
+            # Normal distribution with mean=self.avg_size
+            normal = np.random.normal(loc=1.0, scale=0.17)
+            return (self.avg_size - self.OVERHEAD) * normal
+        else:
+            # Beta distribution, 2KB-2MB range
+            return 2048 / np.random.beta(a=2.2, b=1.0)
 
     def next(self, key):
         alphabet = self._build_alphabet(key)
