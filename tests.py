@@ -54,6 +54,11 @@ class NestedDocTest(unittest.TestCase):
         d1['body'] = d2['body'] = None
         self.assertEqual(d1, d2)
 
+    def test_alphabet_size(self):
+        docgen = NewNestedDocument(avg_size=self.SIZE)
+        alphabet = docgen._build_alphabet('key')
+        self.assertEqual(len(alphabet), 64)
+
 
 if __name__ == '__main__':
     unittest.main()

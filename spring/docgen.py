@@ -174,7 +174,7 @@ class NewDocument(Iterator):
     @staticmethod
     def _build_body(alphabet, length):
         length_int = int(length)
-        num_slices = int(math.ceil(length / len(alphabet)))
+        num_slices = int(math.ceil(length / 64))  # 64 == len(alphabet)
         body = num_slices * alphabet
         return body[:length_int]
 
