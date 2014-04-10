@@ -60,11 +60,10 @@ class SequentialHotKey(Iterator):
     def __iter__(self):
         num_hot_keys = int(self.ws.items * self.ws.working_set / 100.0)
         num_cold_items = self.ws.items - num_hot_keys
-        keys_per_worker = num_hot_keys / self.ws.workers
-        left_limit = 1 + num_cold_items + self.sid * keys_per_worker
-        right_limit = left_limit + keys_per_worker
 
-        for seq_id in xrange(left_limit, right_limit):
+        for seq_id in xrange(1 + num_cold_items + self.sid,
+                             1 + self.ws.items,
+                             self.ws.workers):
             key = 'key-%d' % seq_id
             key = self.add_prefix(key)
             yield key

@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from spring.docgen import NewNestedDocument
+from spring.docgen import NewNestedDocument, SequentialHotKey
 
 from fastdocgen import build_achievements
 
@@ -58,6 +58,21 @@ class NestedDocTest(unittest.TestCase):
         docgen = NewNestedDocument(avg_size=self.SIZE)
         alphabet = docgen._build_alphabet('key')
         self.assertEqual(len(alphabet), 64)
+
+
+class KeysTest(unittest.TestCase):
+
+    def test_seq_hot_keys(self):
+        ws = type('', (), {'items': 10000, 'working_set': 20, 'workers': 20})()
+        hot_keys = [
+            'key-%d' % i
+            for i in range(1 + ws.items * (100 - ws.working_set) / 100,
+                           ws.items + 1)
+        ]
+        actual_keys = []
+        for sid in range(ws.workers):
+            actual_keys += list(SequentialHotKey(sid=sid, ws=ws, prefix=None))
+        self.assertEqual(sorted(hot_keys), sorted(actual_keys))
 
 
 if __name__ == '__main__':
