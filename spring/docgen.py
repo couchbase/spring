@@ -145,8 +145,8 @@ class NewDocument(Iterator):
 
     @staticmethod
     def _build_gmtime(alphabet):
-        days = 24 * 3600 * (int(alphabet[63], 16) % 12)
-        return tuple(time.gmtime(days * 396))
+        seconds = 396 * 24 * 3600 * (int(alphabet[63], 16) % 12)
+        return tuple(time.gmtime(seconds))
 
     @staticmethod
     def _build_year(alphabet):
