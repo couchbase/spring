@@ -51,15 +51,15 @@ class NewQuery(object):
                 'startkey': name,
                 'descending': True,
             },
-            'name_by_category_and_and_coins': {
+            'name_by_category_and_coins': {
                 'startkey': [category, 0],
                 'endkey': [category, coins],
             },
-            'name_and_email_by_category_and_and_coins': {
+            'name_and_email_by_category_and_coins': {
                 'startkey': [category, 0],
                 'endkey': [category, coins],
             },
-            'achievements_by_category_and_and_coins': {
+            'achievements_by_category_and_coins': {
                 'startkey': [category, 0],
                 'endkey': [category, coins],
             },
