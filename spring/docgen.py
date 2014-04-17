@@ -46,7 +46,7 @@ class ExistingKey(Iterator):
         else:
             right_limit = left_limit + num_cold_items
         key = np.random.random_integers(left_limit, right_limit)
-        key = 'key-%d' % key
+        key = '%012d' % key
         return self.add_prefix(key)
 
 
@@ -64,7 +64,7 @@ class SequentialHotKey(Iterator):
         for seq_id in xrange(1 + num_cold_items + self.sid,
                              1 + self.ws.items,
                              self.ws.workers):
-            key = 'key-%d' % seq_id
+            key = '%012d' % seq_id
             key = self.add_prefix(key)
             yield key
 
@@ -77,7 +77,7 @@ class NewKey(Iterator):
         self.ttls = cycle(range(150, 450, 30))
 
     def next(self, curr_items):
-        key = 'key-%d' % curr_items
+        key = '%012d' % curr_items
         key = self.add_prefix(key)
         ttl = None
         if self.expiration and random.randint(1, 100) <= self.expiration:
@@ -91,7 +91,7 @@ class KeyForRemoval(Iterator):
         self.prefix = prefix
 
     def next(self, curr_deletes):
-        key = 'key-%d' % curr_deletes
+        key = '%012d' % curr_deletes
         return self.add_prefix(key)
 
 

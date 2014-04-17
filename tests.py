@@ -35,7 +35,7 @@ class NestedDocTest(unittest.TestCase):
     def test_doc_size(self):
         docgen = NewNestedDocument(avg_size=self.SIZE)
         sizes = tuple(
-            len(json.dumps(docgen.next(key='key-{}'.format(i))))
+            len(json.dumps(docgen.next(key='%012s' % i)))
             for i in range(10000)
         )
         mean = np.mean(sizes)
@@ -87,7 +87,7 @@ class KeysTest(unittest.TestCase):
     def test_seq_hot_keys(self):
         ws = type('', (), {'items': 10000, 'working_set': 20, 'workers': 20})()
         hot_keys = [
-            'key-%d' % i
+            '%012d' % i
             for i in range(1 + ws.items * (100 - ws.working_set) / 100,
                            ws.items + 1)
         ]
