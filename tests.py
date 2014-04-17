@@ -47,7 +47,7 @@ class NestedDocTest(unittest.TestCase):
         self.assertLess(max(sizes), 2 * 1024 ** 2)
         self.assertGreater(min(sizes), 0)
 
-    def test_doc_contest(self):
+    def test_doc_content(self):
         docgen = NewNestedDocument(avg_size=0)
         actual = docgen.next(key='000000000020')
         expected = {
@@ -68,6 +68,23 @@ class NestedDocTest(unittest.TestCase):
             'body': '',
         }
         self.assertEqual(actual, expected)
+
+    def test_gmtime_variation(self):
+        docgen = NewNestedDocument(avg_size=0)
+        keys = set()
+        for k in range(1000):
+            key = '%012d' % k
+            doc = docgen.next(key)
+            keys.add(doc['gmtime'])
+        self.assertEqual(len(keys), 12)
+
+    def test_achievements_length(self):
+        docgen = NewNestedDocument(avg_size=0)
+        for k in range(100000):
+            key = '%012d' % k
+            doc = docgen.next(key)
+            self.assertLessEqual(len(doc['achievements']), 10)
+            self.assertGreater(len(doc['achievements']), 0)
 
     def test_determenistic(self):
         docgen = NewNestedDocument(avg_size=self.SIZE)
