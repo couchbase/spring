@@ -150,7 +150,7 @@ class NewDocument(Iterator):
 
     @staticmethod
     def _build_year(alphabet):
-        return 1985 + int(alphabet[62], 32)
+        return 1985 + int(alphabet[62], 16)
 
     @staticmethod
     def _build_state(alphabet):
