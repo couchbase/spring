@@ -180,7 +180,7 @@ class NewDocument(Iterator):
     def next(self, key):
         next_length = self._get_variation_coeff() * self.avg_size
         alphabet = self._build_alphabet(key)
-        doc = {
+        return {
             'name': self._build_name(alphabet),
             'email': self._build_email(alphabet),
             'city': self._build_city(alphabet),
@@ -190,59 +190,11 @@ class NewDocument(Iterator):
             'achievements': self._build_achievements(alphabet),
             'body': self._build_body(alphabet, next_length)
         }
-        return doc
 
 
 class NewNestedDocument(NewDocument):
 
-    TEMPLATE = {
-        'name': {'f': {'f': {'f': None}}},
-        'email': {'f': {'f': None}},
-        'street': {'f': {'f': None}},
-        'city': {'f': {'f': None}},
-        'county': {'f': {'f': None}},
-        'state': {'f': None},
-        'full_state': {'f': None},
-        'country': {'f': None},
-        'realm': {'f': None},
-        'coins': {'f': None},
-        'category': None,
-        'achievements': None,
-        'gmtime': None,
-        'year': None,
-        'body': None,
-    }
-
-    NAMES = ('name', 'email', 'street', 'city', 'county', 'state', 'full_state',
-             'country', 'realm', 'coins', 'category', 'achievements', 'gmtime',
-             'year', 'body')
-
-    L1 = 15
-    L2 = 10
-    L3 = 5
-    L4 = 1
-
     OVERHEAD = 450  # Minimum size due to fixed fields, body size is variable
-
-    def _values(self, alphabet, next_length):
-        for method, args in (
-            (self._build_name, (alphabet, )),
-            (self._build_email, (alphabet, )),
-            (self._build_street, (alphabet, )),
-            (self._build_city, (alphabet, )),
-            (self._build_county, (alphabet, )),
-            (self._build_state, (alphabet, )),
-            (self._build_full_state, (alphabet, )),
-            (self._build_country, (alphabet, )),
-            (self._build_realm, (alphabet, )),
-            (self._build_coins, (alphabet, )),
-            (self._build_category, (alphabet, )),
-            (self._build_achievements, (alphabet, )),
-            (self._build_gmtime, (alphabet, )),
-            (self._build_year, (alphabet, )),
-            (self._build_body, (alphabet, next_length))
-        ):
-            yield method(*args)
 
     def _size(self):
         if random.random() < 0.975:
@@ -255,15 +207,21 @@ class NewNestedDocument(NewDocument):
 
     def next(self, key):
         alphabet = self._build_alphabet(key)
-        field_values = self._values(alphabet, self._size())
-
-        doc = dict(**self.TEMPLATE)
-        for i in xrange(self.L4):
-            doc[self.NAMES[i]]['f']['f']['f'] = field_values.next()
-        for i in xrange(self.L4, self.L3):
-            doc[self.NAMES[i]]['f']['f'] = field_values.next()
-        for i in xrange(self.L3, self.L2):
-            doc[self.NAMES[i]]['f'] = field_values.next()
-        for i in xrange(self.L2, self.L1):
-            doc[self.NAMES[i]] = field_values.next()
-        return doc
+        size = self._size()
+        return {
+            'name': {'f': {'f': {'f': self._build_name(alphabet)}}},
+            'email': {'f': {'f': self._build_email(alphabet)}},
+            'street': {'f': {'f': self._build_street(alphabet)}},
+            'city': {'f': {'f': self._build_city(alphabet)}},
+            'county': {'f': {'f': self._build_county(alphabet)}},
+            'state': {'f': self._build_state(alphabet)},
+            'full_state': {'f': self._build_full_state(alphabet)},
+            'country': {'f': self._build_country(alphabet)},
+            'realm': {'f': self._build_realm(alphabet)},
+            'coins': {'f': self._build_coins(alphabet)},
+            'category': self._build_category(alphabet),
+            'achievements': self._build_achievements(alphabet),
+            'gmtime': self._build_gmtime(alphabet),
+            'year': self._build_year(alphabet),
+            'body': self._build_body(alphabet, size),
+        }

@@ -47,6 +47,28 @@ class NestedDocTest(unittest.TestCase):
         self.assertLess(max(sizes), 2 * 1024 ** 2)
         self.assertGreater(min(sizes), 0)
 
+    def test_doc_contest(self):
+        docgen = NewNestedDocument(avg_size=0)
+        actual = docgen.next(key='000000000020')
+        expected = {
+            'name': {'f': {'f': {'f': 'ecdb3e e921c9'}}},
+            'email': {'f': {'f': '3d13c6@a2d1f3.com'}},
+            'street': {'f': {'f': '400f1d0a'}},
+            'city': {'f': {'f': '90ac48'}},
+            'county': {'f': {'f': '40efd6'}},
+            'state': {'f': 'WY'},
+            'full_state': {'f': 'Montana'},
+            'country': {'f': '1811db'},
+            'realm': {'f': '15e3f5'},
+            'coins': {'f': 213.54},
+            'category': 1,
+            'achievements': [0, 135, 92],
+            'gmtime': (1972, 3, 3, 0, 0, 0, 4, 63, 0),
+            'year': 1989,
+            'body': '',
+        }
+        self.assertEqual(actual, expected)
+
     def test_determenistic(self):
         docgen = NewNestedDocument(avg_size=self.SIZE)
         d1 = docgen.next(key='mykey')
