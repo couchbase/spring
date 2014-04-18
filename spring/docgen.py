@@ -197,7 +197,7 @@ class NewNestedDocument(NewDocument):
     OVERHEAD = 450  # Minimum size due to fixed fields, body size is variable
 
     def _size(self):
-        if not self.avg_size < self.OVERHEAD:
+        if self.avg_size <= self.OVERHEAD:
             return 0
         if random.random() < 0.975:
             # Normal distribution with mean=self.avg_size

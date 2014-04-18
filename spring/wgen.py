@@ -9,7 +9,7 @@ from twisted.internet import reactor
 
 from spring.cbgen import CBGen, CBAsyncGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
-                           NewKey, NewDocument)
+                           NewKey, NewDocument, NewNestedDocument)
 from spring.querygen import NewQuery
 
 
@@ -43,7 +43,12 @@ class Worker(object):
                                          self.ts.prefix)
         self.new_keys = NewKey(self.ts.prefix, self.ws.expiration)
         self.keys_for_removal = KeyForRemoval(self.ts.prefix)
-        self.docs = NewDocument(self.ws.size)
+
+        if not hasattr(workload_settings, 'doc_gen') or \
+                workload_settings.doc_gen == 'old':
+            self.docs = NewDocument(self.ws.size)
+        else:
+            self.docs = NewNestedDocument(self.ws.size)
 
         self.next_report = 0.05  # report after every 5% of completion
 

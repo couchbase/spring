@@ -15,6 +15,7 @@ class WorkloadSettings(object):
         self.ops = options.ops
         self.throughput = options.throughput
 
+        self.doc_gen = options.generator
         self.size = options.size
         self.items = options.items
         self.expiration = options.expiration

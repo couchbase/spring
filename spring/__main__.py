@@ -77,6 +77,11 @@ class CLIParser(ArgumentParser):
             '-n', dest='workers', type=int, default=1, metavar='',
             help='number of workers (1 by default)'
         )
+        self.add_argument(
+            '-g', dest='generator', type=str, default='old', metavar='',
+            choices=('old', 'new'),
+            help='document generator ("old" or "new")'
+        )
         self.add_argument('--async', action='store_true', default=False,
                           help='enable asynchronous mode')
 
