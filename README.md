@@ -92,20 +92,20 @@ After nose installation:
 Documents specification
 -----------------------
 
-| Field        | Specification            | Combinations           | Example                         |
-| -------------| -------------------------| -----------------------| ------------------------------- |
-| name         | 12 hex chars             | 281 474 976 710 656    | ecdb3e e921c9                   |
-| email        | 12 hex chars             | 281 474 976 710 656    | 3d13c6@a2d1f3.com               |
-| street       | 8 hex chars              | 4 294 967 296          | 400f1d0a                        |
-| city         | 6 hex chars              | 16 777 216             | 90ac48                          |
-| county       | 6 hex chars              | 16 777 216             | 40efd6                          |
-| country      | 6 hex chars              | 16 777 216             | 1811db                          |
-| realm        | 6 hex chars              | 16 777 216             | 15e3f5                          |
-| state        | 2 chars                  | 57                     | WY                              |
-| full_state   | 4-24 chars               | 57                     | Montana                         |
-| coins        | float [0.1, 655.35]      | 65 535                 | 213.54                          |
-| category     | int [0, 2]               | 3                      | 1                               |
-| achievements | [1, 10]array int[0, 511] | inf                    | [0, 135, 92]                    |
-| gmtime       | date time array          | 12                     | [1972, 3, 3, 0, 0, 0, 4, 63, 0] |
-| year         | int [1985, 2000]         | 15                     | 1989                            |
-| body         | hex string               | inf                    | N/A                             |
+| Field          | Specification            | Combinations           | Example                         |
+| ---------------| -------------------------| -----------------------| ------------------------------- |
+| name[.f.f.f]   | 12 hex chars             | 281 474 976 710 656    | ecdb3e e921c9                   |
+| email[.f.f]    | 12 hex chars             | 281 474 976 710 656    | 3d13c6@a2d1f3.com               |
+| street[.f.f]   | 8 hex chars              | 4 294 967 296          | 400f1d0a                        |
+| city[.f.f]     | 6 hex chars              | 16 777 216             | 90ac48                          |
+| county[.f.f]   | 6 hex chars              | 16 777 216             | 40efd6                          |
+| country[.f]    | 6 hex chars              | 16 777 216             | 1811db                          |
+| realm[.f]      | 6 hex chars              | 16 777 216             | 15e3f5                          |
+| state[.f]      | 2 chars                  | 57                     | WY                              |
+| full_state[.f] | 4-24 chars               | 57                     | Montana                         |
+| coins[.f]      | float [0.1, 655.35]      | 65 535                 | 213.54                          |
+| category       | int [0, 2]               | 3                      | 1                               |
+| achievements   | [1, 10]array int[0, 511] | inf                    | [0, 135, 92]                    |
+| gmtime         | date time array          | 12                     | [1972, 3, 3, 0, 0, 0, 4, 63, 0] |
+| year           | int [1985, 2000]         | 15                     | 1989                            |
+| body           | hex string               | inf                    | N/A                             |
