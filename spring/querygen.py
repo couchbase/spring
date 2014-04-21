@@ -126,7 +126,9 @@ class NewQueryNG(object):
         ),
     }
 
-    def __init__(self, index_type):
+    def __init__(self, index_type, params):
+        self.params = dict(self.PARAMS, **params)
+
         self.view_sequence = cycle(self.VIEWS_PER_TYPE[index_type])
 
     @staticmethod
@@ -198,5 +200,5 @@ class NewQueryNG(object):
     def next(self, doc):
         view_name = self.view_sequence.next()
         params = self.generate_params(**doc)[view_name]
-        params = dict(self.PARAMS, **params)
+        params = dict(self.params, **params)
         return self.DDOC_NAME, view_name, Query(**params)

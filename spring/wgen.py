@@ -268,7 +268,7 @@ class QueryWorker(Worker):
         if index_type is None:
             self.new_queries = NewQuery(ddocs, params)
         else:
-            self.new_queries = NewQueryNG(index_type)
+            self.new_queries = NewQueryNG(index_type, params)
 
     @with_sleep
     def do_batch(self):
