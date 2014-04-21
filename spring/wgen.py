@@ -44,8 +44,7 @@ class Worker(object):
         self.new_keys = NewKey(self.ts.prefix, self.ws.expiration)
         self.keys_for_removal = KeyForRemoval(self.ts.prefix)
 
-        if not hasattr(workload_settings, 'doc_gen') or \
-                workload_settings.doc_gen == 'old':
+        if not hasattr(self.ws, 'doc_gen') or self.ws.doc_gen == 'old':
             self.docs = NewDocument(self.ws.size)
         else:
             self.docs = NewNestedDocument(self.ws.size)

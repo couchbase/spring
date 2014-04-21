@@ -1,6 +1,6 @@
 from itertools import cycle
-from numpy import random
 
+from numpy import random
 from couchbase.views.params import Query
 
 
@@ -134,28 +134,28 @@ class NewQueryNG(object):
                         category, year, achievements, gmtime, **kwargs):
         return {
             'name_and_street_by_city': {
-                'key': city,
+                'key': city['f']['f'],
             },
             'name_and_email_by_county': {
-                'key': county,
+                'key': county['f']['f'],
             },
             'achievements_by_realm': {
-                'key': realm,
+                'key': realm['f'],
             },
             'name_by_coins': {
-                'startkey': coins * 0.5,
-                'endkey': coins,
+                'startkey': coins['f'] * 0.5,
+                'endkey': coins['f'],
             },
             'email_by_achievement_and_category': {
                 'startkey': [0, category],
                 'endkey': [achievements[0], category],
             },
             'street_by_year_and_coins': {
-                'startkey': [year, coins],
+                'startkey': [year, coins['f']],
                 'endkey': [year, 655.35],
             },
             'coins_stats_by_state_and_year': {
-                'key': [state, year],
+                'key': [state['f'], year],
                 'group': 'true'
             },
             'coins_stats_by_gmtime_and_year': {
@@ -163,35 +163,35 @@ class NewQueryNG(object):
                 'group_level': 2
             },
             'coins_stats_by_full_state_and_year': {
-                'key': [full_state, year],
+                'key': [full_state['f'], year],
                 'group': 'true'
             },
             'name_and_email_and_street_and_achievements_and_coins_by_city': {
-                'key': city,
+                'key': city['f']['f'],
             },
             'street_and_name_and_email_and_achievement_and_dobule_by_county': {
-                'key': county,
+                'key': county['f']['f'],
             },
             'category_name_and_email_and_street_and_gmtime_and_year_by_country': {
-                'key': country,
+                'key': country['f'],
             },
             'calc_by_city': {
-                'key': city,
+                'key': city['f']['f'],
             },
             'calc_by_county': {
-                'key': county,
+                'key': county['f']['f'],
             },
             'calc_by_realm': {
-                'key': realm,
+                'key': realm['f'],
             },
             'body_by_city': {
-                'key': city,
+                'key': city['f']['f'],
             },
             'body_by_realm': {
-                'key': realm,
+                'key': realm['f'],
             },
             'body_by_country': {
-                'key': country,
+                'key': country['f'],
             },
         }
 
