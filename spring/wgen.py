@@ -10,7 +10,7 @@ from twisted.internet import reactor
 from spring.cbgen import CBGen, CBAsyncGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
                            NewKey, NewDocument, NewNestedDocument)
-from spring.querygen import NewQuery
+from spring.querygen import NewQuery, NewQueryNG
 
 
 @decorator
@@ -263,10 +263,13 @@ class WorkerFactory(object):
 class QueryWorker(Worker):
 
     def __init__(self, workload_settings, target_settings, shutdown_event,
-                 ddocs, params):
+                 ddocs, params, index_type):
         super(QueryWorker, self).__init__(workload_settings, target_settings,
                                           shutdown_event)
-        self.new_queries = NewQuery(ddocs, params)
+        if index_type is None:
+            self.new_queries = NewQuery(ddocs, params)
+        else:
+            self.new_queries = NewQueryNG(index_type)
 
     @with_sleep
     def do_batch(self):
@@ -307,7 +310,7 @@ class QueryWorker(Worker):
 class WorkloadGen(object):
 
     def __init__(self, workload_settings, target_settings, timer=None,
-                 ddocs=None, qparams={}):
+                 ddocs=None, qparams={}, index_type=None):
         self.ws = workload_settings
         self.ts = target_settings
         self.timer = timer
@@ -315,6 +318,7 @@ class WorkloadGen(object):
 
         self.ddocs = ddocs
         self.qparams = qparams
+        self.index_type = index_type
 
     def start_kv_workers(self, curr_items, deleted_items):
         curr_ops = Value('L', 0)
@@ -340,7 +344,7 @@ class WorkloadGen(object):
         self.query_workers = list()
         for sid in range(self.ws.query_workers):
             worker = QueryWorker(self.ws, self.ts, self.shutdown_event,
-                                 self.ddocs, self.qparams)
+                                 self.ddocs, self.qparams, self.index_type)
             worker_process = Process(
                 target=worker.run,
                 args=(sid, lock, curr_queries, curr_items, deleted_items)

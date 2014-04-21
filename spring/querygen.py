@@ -82,3 +82,121 @@ class NewQuery(object):
         params = self.generate_params(**doc)[view_name]
         params = dict(self.params, **params)
         return ddoc_name, view_name, Query(**params)
+
+
+class NewQueryNG(object):
+
+    PARAMS = {
+        'limit': 20,
+        'stale': 'update_after',
+    }
+
+    DDOC_NAME = 'ddoc'
+
+    VIEWS_PER_TYPE = {
+        'basic': (
+            'name_and_street_by_city',
+            'name_and_email_by_county',
+            'achievements_by_realm',
+        ),
+        'range': (
+            'name_by_coins',
+            'email_by_achievement_and_category',
+            'street_by_year_and_coins',
+        ),
+        'group_by': (
+            'coins_stats_by_state_and_year',
+            'coins_stats_by_gmtime_and_year',
+            'coins_stats_by_full_state_and_year',
+        ),
+        'multi_emits': (
+            'name_and_email_and_street_and_achievements_and_coins_by_city',
+            'street_and_name_and_email_and_achievement_and_dobule_by_county',
+            'category_name_and_email_and_street_and_gmtime_and_year_by_country',
+        ),
+        'compute': (
+            'calc_by_city',
+            'calc_by_county',
+            'calc_by_realm',
+        ),
+        'body': (
+            'body_by_city',
+            'body_by_realm',
+            'body_by_country',
+        ),
+    }
+
+    def __init__(self, index_type):
+        self.view_sequence = cycle(self.VIEWS_PER_TYPE[index_type])
+
+    @staticmethod
+    def generate_params(city, county, country, realm, state, full_state, coins,
+                        category, year, achievements, gmtime, **kwargs):
+        return {
+            'name_and_street_by_city': {
+                'key': city,
+            },
+            'name_and_email_by_county': {
+                'key': county,
+            },
+            'achievements_by_realm': {
+                'key': realm,
+            },
+            'name_by_coins': {
+                'startkey': coins * 0.5,
+                'endkey': coins,
+            },
+            'email_by_achievement_and_category': {
+                'startkey': [0, category],
+                'endkey': [achievements[0], category],
+            },
+            'street_by_year_and_coins': {
+                'startkey': [year, coins],
+                'endkey': [year, 655.35],
+            },
+            'coins_stats_by_state_and_year': {
+                'key': [state, year],
+                'group': 'true'
+            },
+            'coins_stats_by_gmtime_and_year': {
+                'key': [gmtime, year],
+                'group_level': 2
+            },
+            'coins_stats_by_full_state_and_year': {
+                'key': [full_state, year],
+                'group': 'true'
+            },
+            'name_and_email_and_street_and_achievements_and_coins_by_city': {
+                'key': city,
+            },
+            'street_and_name_and_email_and_achievement_and_dobule_by_county': {
+                'key': county,
+            },
+            'category_name_and_email_and_street_and_gmtime_and_year_by_country': {
+                'key': country,
+            },
+            'calc_by_city': {
+                'key': city,
+            },
+            'calc_by_county': {
+                'key': county,
+            },
+            'calc_by_realm': {
+                'key': realm,
+            },
+            'body_by_city': {
+                'key': city,
+            },
+            'body_by_realm': {
+                'key': realm,
+            },
+            'body_by_country': {
+                'key': country,
+            },
+        }
+
+    def next(self, doc):
+        view_name = self.view_sequence.next()
+        params = self.generate_params(**doc)[view_name]
+        params = dict(self.PARAMS, **params)
+        return self.DDOC_NAME, view_name, Query(**params)
