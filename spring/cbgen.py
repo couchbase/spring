@@ -1,4 +1,5 @@
 from random import choice
+from time import time
 
 from couchbase import experimental
 experimental.enable()
@@ -84,8 +85,10 @@ class CBGen(CBAsyncGen):
         url = 'http://{}/{}/_design/{}/_view/{}?{}'.format(
             node, self.client.bucket, ddoc, view, query.encoded
         )
+        t0 = time()
         resp = self.session.get(url=url)
-        return resp.text
+        latency = time() - t0
+        return resp.text, latency
 
     @quiet
     def lcb_query(self, ddoc, view, query):
