@@ -111,7 +111,7 @@ class NewQueryNG(object):
         ),
         'multi_emits': (
             'name_and_email_and_street_and_achievements_and_coins_by_city',
-            'street_and_name_and_email_and_achievement_and_dobule_by_county',
+            'street_and_name_and_email_and_achievement_and_coins_by_county',
             'category_name_and_email_and_street_and_gmtime_and_year_by_country',
         ),
         'compute': (
@@ -171,7 +171,7 @@ class NewQueryNG(object):
             'name_and_email_and_street_and_achievements_and_coins_by_city': {
                 'key': city['f']['f'],
             },
-            'street_and_name_and_email_and_achievement_and_dobule_by_county': {
+            'street_and_name_and_email_and_achievement_and_coins_by_county': {
                 'key': county['f']['f'],
             },
             'category_name_and_email_and_street_and_gmtime_and_year_by_country': {
