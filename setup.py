@@ -21,7 +21,7 @@ setup(
         'logger',
         'numpy',
         'requests==2.1.0',
-        'twisted==10.0.0',
+        'twisted==12.0.0',
     ],
     ext_modules=[
         fastdocgen
