@@ -93,3 +93,19 @@ class CBGen(CBAsyncGen):
     @quiet
     def lcb_query(self, ddoc, view, query):
         return tuple(self.client.query(ddoc, view, query=query))
+
+
+class N1QLGen(CBGen):
+
+    def __init__(self, **kwargs):
+        self.client = Connection(**kwargs)
+        self.session = requests.Session()
+        self.session.headers.update({'Content-Type': 'text/plain'})
+
+    def query(self, ddoc_name, view_name, query):
+        node = choice(self.client.server_nodes).replace('8091', '8093')
+        url = 'http://{}/query'.format(node)
+        t0 = time()
+        resp = self.session.post(url=url, data=query)
+        latency = time() - t0
+        return resp.text, latency

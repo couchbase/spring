@@ -202,3 +202,143 @@ class NewQueryNG(object):
         params = self.generate_params(**doc)[view_name]
         params = dict(self.params, **params)
         return self.DDOC_NAME, view_name, Query(**params)
+
+
+class NewN1QLQuery(NewQueryNG):
+
+    QUERIES = {
+        'name_and_street_by_city': '''
+            SELECT category
+                FROM {bucket}
+                WHERE city.f.f = "{city}"
+                LIMIT 20
+        ''',
+        'name_and_email_by_county': '''
+            SELECT name.f.f.f AS _name, email.f.f AS _email
+                FROM {bucket}
+                WHERE county.f.f = "{county}"
+                LIMIT 20
+        ''',
+        'achievements_by_realm': '''
+            SELECT achievements
+                FROM {bucket}
+                WHERE realm.f = "{realm}"
+                LIMIT 20
+        ''',
+        'name_by_coins': '''
+            SELECT name.f.f.f AS _name
+                FROM {bucket}
+                WHERE coins.f > {coins} AND coins.f < {coins}
+                LIMIT 20
+        ''',
+        'email_by_achievement_and_category': '''
+            SELECT email.f.f AS _email
+                FROM {bucket}
+                WHERE category = {category}
+                    AND achievements[0] > 0
+                    AND achievements[0] < {achievements[0]}
+                LIMIT 20
+        ''',
+        'street_by_year_and_coins': '''
+            SELECT street
+                FROM {bucket}
+                WHERE year = {year}
+                    AND coins.f > {coins}
+                    AND coins.f < 655.35
+                LIMIT 20
+        ''',
+        'name_and_email_and_street_and_achievements_and_coins_by_city': '''
+            SELECT name.f.f.f AS _name,
+                    email.f.f AS _email,
+                    street.f.f AS _street,
+                    achievements,
+                    coins.f AS _coins
+                FROM {bucket}
+                WHERE city.f.f = "{city}"
+                LIMIT 20
+        ''',
+        'street_and_name_and_email_and_achievement_and_coins_by_county': '''
+            SELECT street.f.f AS _street,
+                    name.f.f.f AS _name,
+                    email.f.f AS _email,
+                    achievements[0] AS achievement,
+                    2*coins.f AS _coins
+                FROM {bucket}
+                WHERE county.f.f = "{county}"
+                LIMIT 20
+        ''',
+        'category_name_and_email_and_street_and_gmtime_and_year_by_country': '''
+            SELECT category,
+                    name.f.f.f AS _name,
+                    email.f.f AS _email,
+                    street.f.f AS _street,
+                    gmtime,
+                    year
+                FROM {bucket}
+                WHERE country.f = "{country}"
+                LIMIT 20
+        ''',
+        'body_by_city': '''
+            SELECT body
+                FROM {bucket}
+                WHERE city.f.f = "{city}"
+                LIMIT 20
+        ''',
+        'body_by_realm': '''
+            SELECT body
+                FROM {bucket}
+                WHERE realm.f = "{realm}"
+                LIMIT 20
+        ''',
+        'body_by_country': '''
+            SELECT body
+                FROM {bucket}
+                WHERE country.f = "{country}"
+                LIMIT 20
+        ''',
+        'coins_stats_by_state_and_year': '''
+            SELECT COUNT(coins.f),
+                    SUM(coins.f),
+                    AVG(coins.f),
+                    MIN(coins.f),
+                    MAX(coins.f)
+                FROM {bucket}
+                WHERE state.f = "{state}" and year = {year}
+                GROUP BY state.f, year
+                LIMIT 20
+        ''',
+        'coins_stats_by_gmtime_and_year': '''
+            SELECT COUNT(coins.f),
+                    SUM(coins.f),
+                    AVG(coins.f),
+                    MIN(coins.f),
+                    MAX(coins.f)
+                FROM {bucket}
+                WHERE gmtime = {gmtime} and year = {year}
+                GROUP BY gmtime, year
+                LIMIT 20
+        ''',
+        'coins_stats_by_full_state_and_year': '''
+            SELECT COUNT(coins.f),
+                    SUM(coins.f),
+                    AVG(coins.f),
+                    MIN(coins.f),
+                    MAX(coins.f)
+                FROM {bucket}
+                WHERE full_state.f = "{full_state}" and year = {year}
+                GROUP BY full_state.f, year
+                LIMIT 20
+        ''',
+    }
+
+    def __init__(self, index_type, bucket):
+        self.bucket = bucket
+        self.view_sequence = cycle(self.VIEWS_PER_TYPE[index_type])
+
+    def generate_query(self, bucket, view_name, **doc):
+        return
+
+    def next(self, doc):
+        view_name = self.view_sequence.next()
+        query = self.QUERIES[view_name].format(bucket=self.bucket, **doc)
+        return None, None, query

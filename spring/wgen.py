@@ -7,10 +7,10 @@ from couchbase.exceptions import ValueFormatError
 from logger import logger
 from twisted.internet import reactor
 
-from spring.cbgen import CBGen, CBAsyncGen
+from spring.cbgen import CBGen, CBAsyncGen, N1QLGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
                            NewKey, NewDocument, NewNestedDocument)
-from spring.querygen import NewQuery, NewQueryNG
+from spring.querygen import NewQuery, NewQueryNG, NewN1QLQuery
 
 
 @decorator
@@ -306,10 +306,24 @@ class QueryWorker(Worker):
             logger.info('Finished: query-worker-{}'.format(self.sid))
 
 
+class N1QLWorker(QueryWorker):
+
+    def __init__(self, workload_settings, target_settings, shutdown_event,
+                 ddocs, params, index_type):
+        super(QueryWorker, self).__init__(workload_settings, target_settings,
+                                          shutdown_event)
+        self.new_queries = NewN1QLQuery(index_type, target_settings.bucket)
+
+        host, port = self.ts.node.split(':')
+        params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
+                  'username': self.ts.bucket, 'password': self.ts.password}
+        self.cb = N1QLGen(**params)
+
+
 class WorkloadGen(object):
 
     def __init__(self, workload_settings, target_settings, timer=None,
-                 ddocs=None, qparams={}, index_type=None):
+                 ddocs=None, qparams={}, index_type=None, n1ql=False):
         self.ws = workload_settings
         self.ts = target_settings
         self.timer = timer
@@ -318,6 +332,7 @@ class WorkloadGen(object):
         self.ddocs = ddocs
         self.qparams = qparams
         self.index_type = index_type
+        self.n1ql = n1ql
 
     def start_kv_workers(self, curr_items, deleted_items):
         curr_ops = Value('L', 0)
@@ -340,9 +355,13 @@ class WorkloadGen(object):
         curr_queries = Value('L', 0)
         lock = Lock()
 
+        if self.n1ql:
+            worker_type = N1QLWorker
+        else:
+            worker_type = QueryWorker
         self.query_workers = list()
         for sid in range(self.ws.query_workers):
-            worker = QueryWorker(self.ws, self.ts, self.shutdown_event,
+            worker = worker_type(self.ws, self.ts, self.shutdown_event,
                                  self.ddocs, self.qparams, self.index_type)
             worker_process = Process(
                 target=worker.run,
