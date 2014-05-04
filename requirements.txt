@@ -3,4 +3,4 @@ decorator
 logger
 numpy
 requests==2.1.0
-twisted==12.1.0
+twisted==12.0.0
