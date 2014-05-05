@@ -210,25 +210,25 @@ class NewN1QLQuery(NewQueryNG):
         'name_and_street_by_city': '''
             SELECT category
                 FROM {{bucket}}
-                WHERE city.f.f = "{city}"
+                WHERE city.f.f = "{city[f][f]}"
                 LIMIT 20
         ''',
         'name_and_email_by_county': '''
             SELECT name.f.f.f AS _name, email.f.f AS _email
                 FROM {{bucket}}
-                WHERE county.f.f = "{county}"
+                WHERE county.f.f = "{county[f][f]}"
                 LIMIT 20
         ''',
         'achievements_by_realm': '''
             SELECT achievements
                 FROM {{bucket}}
-                WHERE realm.f = "{realm}"
+                WHERE realm.f = "{realm[f]}"
                 LIMIT 20
         ''',
         'name_by_coins': '''
             SELECT name.f.f.f AS _name
                 FROM {{bucket}}
-                WHERE coins.f > {coins} AND coins.f < {coins}
+                WHERE coins.f > {coins[f]} AND coins.f < {coins[f]}
                 LIMIT 20
         ''',
         'email_by_achievement_and_category': '''
@@ -243,7 +243,7 @@ class NewN1QLQuery(NewQueryNG):
             SELECT street
                 FROM {{bucket}}
                 WHERE year = {year}
-                    AND coins.f > {coins}
+                    AND coins.f > {coins[f]}
                     AND coins.f < 655.35
                 LIMIT 20
         ''',
@@ -254,7 +254,7 @@ class NewN1QLQuery(NewQueryNG):
                     achievements,
                     coins.f AS _coins
                 FROM {{bucket}}
-                WHERE city.f.f = "{city}"
+                WHERE city.f.f = "{city[f][f]}"
                 LIMIT 20
         ''',
         'street_and_name_and_email_and_achievement_and_coins_by_county': '''
@@ -264,7 +264,7 @@ class NewN1QLQuery(NewQueryNG):
                     achievements[0] AS achievement,
                     2*coins.f AS _coins
                 FROM {{bucket}}
-                WHERE county.f.f = "{county}"
+                WHERE county.f.f = "{county[f][f]}"
                 LIMIT 20
         ''',
         'category_name_and_email_and_street_and_gmtime_and_year_by_country': '''
@@ -275,25 +275,25 @@ class NewN1QLQuery(NewQueryNG):
                     gmtime,
                     year
                 FROM {{bucket}}
-                WHERE country.f = "{country}"
+                WHERE country.f = "{country[f]}"
                 LIMIT 20
         ''',
         'body_by_city': '''
             SELECT body
                 FROM {{bucket}}
-                WHERE city.f.f = "{city}"
+                WHERE city.f.f = "{city[f][f]}"
                 LIMIT 20
         ''',
         'body_by_realm': '''
             SELECT body
                 FROM {{bucket}}
-                WHERE realm.f = "{realm}"
+                WHERE realm.f = "{realm[f]}"
                 LIMIT 20
         ''',
         'body_by_country': '''
             SELECT body
                 FROM {{bucket}}
-                WHERE country.f = "{country}"
+                WHERE country.f = "{country[f]}"
                 LIMIT 20
         ''',
         'coins_stats_by_state_and_year': '''
@@ -303,7 +303,7 @@ class NewN1QLQuery(NewQueryNG):
                     MIN(coins.f),
                     MAX(coins.f)
                 FROM {{bucket}}
-                WHERE state.f = "{state}" and year = {year}
+                WHERE state.f = "{state[f]}" and year = {year}
                 GROUP BY state.f, year
                 LIMIT 20
         ''',
@@ -325,7 +325,7 @@ class NewN1QLQuery(NewQueryNG):
                     MIN(coins.f),
                     MAX(coins.f)
                 FROM {{bucket}}
-                WHERE full_state.f = "{full_state}" and year = {year}
+                WHERE full_state.f = "{full_state[f]}" and year = {year}
                 GROUP BY full_state.f, year
                 LIMIT 20
         ''',

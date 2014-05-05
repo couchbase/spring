@@ -4,6 +4,7 @@ import unittest
 import numpy as np
 
 from spring.docgen import NewNestedDocument, SequentialHotKey
+from spring.querygen import NewN1QLQuery, NewQueryNG
 
 from fastdocgen import build_achievements
 
@@ -112,6 +113,21 @@ class KeysTest(unittest.TestCase):
         for sid in range(ws.workers):
             actual_keys += list(SequentialHotKey(sid=sid, ws=ws, prefix=None))
         self.assertEqual(sorted(hot_keys), sorted(actual_keys))
+
+
+class N1QlTsts(unittest.TestCase):
+
+    SIZE = 1024
+
+    def test_query_formatting(self):
+        docgen = NewNestedDocument(avg_size=self.SIZE)
+        doc = docgen.next('test-key')
+        for index_type in NewQueryNG.VIEWS_PER_TYPE:
+            if index_type == 'compute':
+                continue
+            qgen = NewN1QLQuery(index_type=index_type)
+            _, _, query = qgen.next(doc)
+            query.format(bucket='bucket-1')
 
 
 if __name__ == '__main__':
