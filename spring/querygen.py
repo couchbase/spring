@@ -209,31 +209,31 @@ class NewN1QLQuery(NewQueryNG):
     QUERIES = {
         'name_and_street_by_city': '''
             SELECT category
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE city.f.f = "{city}"
                 LIMIT 20
         ''',
         'name_and_email_by_county': '''
             SELECT name.f.f.f AS _name, email.f.f AS _email
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE county.f.f = "{county}"
                 LIMIT 20
         ''',
         'achievements_by_realm': '''
             SELECT achievements
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE realm.f = "{realm}"
                 LIMIT 20
         ''',
         'name_by_coins': '''
             SELECT name.f.f.f AS _name
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE coins.f > {coins} AND coins.f < {coins}
                 LIMIT 20
         ''',
         'email_by_achievement_and_category': '''
             SELECT email.f.f AS _email
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE category = {category}
                     AND achievements[0] > 0
                     AND achievements[0] < {achievements[0]}
@@ -241,7 +241,7 @@ class NewN1QLQuery(NewQueryNG):
         ''',
         'street_by_year_and_coins': '''
             SELECT street
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE year = {year}
                     AND coins.f > {coins}
                     AND coins.f < 655.35
@@ -253,7 +253,7 @@ class NewN1QLQuery(NewQueryNG):
                     street.f.f AS _street,
                     achievements,
                     coins.f AS _coins
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE city.f.f = "{city}"
                 LIMIT 20
         ''',
@@ -263,7 +263,7 @@ class NewN1QLQuery(NewQueryNG):
                     email.f.f AS _email,
                     achievements[0] AS achievement,
                     2*coins.f AS _coins
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE county.f.f = "{county}"
                 LIMIT 20
         ''',
@@ -274,25 +274,25 @@ class NewN1QLQuery(NewQueryNG):
                     street.f.f AS _street,
                     gmtime,
                     year
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE country.f = "{country}"
                 LIMIT 20
         ''',
         'body_by_city': '''
             SELECT body
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE city.f.f = "{city}"
                 LIMIT 20
         ''',
         'body_by_realm': '''
             SELECT body
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE realm.f = "{realm}"
                 LIMIT 20
         ''',
         'body_by_country': '''
             SELECT body
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE country.f = "{country}"
                 LIMIT 20
         ''',
@@ -302,7 +302,7 @@ class NewN1QLQuery(NewQueryNG):
                     AVG(coins.f),
                     MIN(coins.f),
                     MAX(coins.f)
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE state.f = "{state}" and year = {year}
                 GROUP BY state.f, year
                 LIMIT 20
@@ -313,7 +313,7 @@ class NewN1QLQuery(NewQueryNG):
                     AVG(coins.f),
                     MIN(coins.f),
                     MAX(coins.f)
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE gmtime = {gmtime} and year = {year}
                 GROUP BY gmtime, year
                 LIMIT 20
@@ -324,15 +324,14 @@ class NewN1QLQuery(NewQueryNG):
                     AVG(coins.f),
                     MIN(coins.f),
                     MAX(coins.f)
-                FROM {bucket}
+                FROM {{bucket}}
                 WHERE full_state.f = "{full_state}" and year = {year}
                 GROUP BY full_state.f, year
                 LIMIT 20
         ''',
     }
 
-    def __init__(self, index_type, bucket):
-        self.bucket = bucket
+    def __init__(self, index_type):
         self.view_sequence = cycle(self.VIEWS_PER_TYPE[index_type])
 
     def generate_query(self, bucket, view_name, **doc):
@@ -340,5 +339,5 @@ class NewN1QLQuery(NewQueryNG):
 
     def next(self, doc):
         view_name = self.view_sequence.next()
-        query = self.QUERIES[view_name].format(bucket=self.bucket, **doc)
+        query = self.QUERIES[view_name].format(**doc)
         return None, None, query

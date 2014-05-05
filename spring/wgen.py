@@ -312,7 +312,7 @@ class N1QLWorker(QueryWorker):
                  ddocs, params, index_type):
         super(QueryWorker, self).__init__(workload_settings, target_settings,
                                           shutdown_event)
-        self.new_queries = NewN1QLQuery(index_type, target_settings.bucket)
+        self.new_queries = NewN1QLQuery(index_type)
 
         host, port = self.ts.node.split(':')
         params = {'bucket': self.ts.bucket, 'host': host, 'port': port,

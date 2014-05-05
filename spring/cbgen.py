@@ -103,6 +103,7 @@ class N1QLGen(CBGen):
         self.session.headers.update({'Content-Type': 'text/plain'})
 
     def query(self, ddoc_name, view_name, query):
+        query = query.format(bucket=self.client.bucket)
         node = choice(self.client.server_nodes).replace('8091', '8093')
         url = 'http://{}/query'.format(node)
         t0 = time()
