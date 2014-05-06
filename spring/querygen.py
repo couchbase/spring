@@ -208,7 +208,7 @@ class NewN1QLQuery(NewQueryNG):
 
     QUERIES = {
         'name_and_street_by_city': '''
-            SELECT category
+            SELECT name.f.f.f AS _name, street.f.f AS _street
                 FROM {{bucket}}
                 WHERE city.f.f = "{city[f][f]}"
                 LIMIT 20
