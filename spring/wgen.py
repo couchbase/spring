@@ -261,14 +261,15 @@ class WorkerFactory(object):
 
 class QueryWorker(Worker):
 
-    def __init__(self, workload_settings, target_settings, shutdown_event,
-                 ddocs, params, index_type):
+    def __init__(self, workload_settings, target_settings, shutdown_event):
         super(QueryWorker, self).__init__(workload_settings, target_settings,
                                           shutdown_event)
-        if index_type is None:
-            self.new_queries = NewQuery(ddocs, params)
+        if workload_settings.index_type is None:
+            self.new_queries = NewQuery(workload_settings.ddocs,
+                                        workload_settings.qparams)
         else:
-            self.new_queries = NewQueryNG(index_type, params)
+            self.new_queries = NewQueryNG(workload_settings.index_type,
+                                          workload_settings.qparams)
 
     @with_sleep
     def do_batch(self):
@@ -308,11 +309,11 @@ class QueryWorker(Worker):
 
 class N1QLWorker(QueryWorker):
 
-    def __init__(self, workload_settings, target_settings, shutdown_event,
-                 ddocs, params, index_type):
+    def __init__(self, workload_settings, target_settings, shutdown_event):
         super(QueryWorker, self).__init__(workload_settings, target_settings,
                                           shutdown_event)
-        self.new_queries = NewN1QLQuery(index_type)
+        self.new_queries = NewN1QLQuery(workload_settings.index_type)
+        self.new_queries = NewN1QLQuery(workload_settings.index_type)
 
         host, port = self.ts.node.split(':')
         params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
@@ -322,17 +323,11 @@ class N1QLWorker(QueryWorker):
 
 class WorkloadGen(object):
 
-    def __init__(self, workload_settings, target_settings, timer=None,
-                 ddocs=None, qparams={}, index_type=None, n1ql=False):
+    def __init__(self, workload_settings, target_settings, timer=None):
         self.ws = workload_settings
         self.ts = target_settings
         self.timer = timer
         self.shutdown_event = timer and Event() or None
-
-        self.ddocs = ddocs
-        self.qparams = qparams
-        self.index_type = index_type
-        self.n1ql = n1ql
 
     def start_kv_workers(self, curr_items, deleted_items):
         curr_ops = Value('L', 0)
@@ -355,14 +350,13 @@ class WorkloadGen(object):
         curr_queries = Value('L', 0)
         lock = Lock()
 
-        if self.n1ql:
+        if self.ws.n1ql:
             worker_type = N1QLWorker
         else:
             worker_type = QueryWorker
         self.query_workers = list()
         for sid in range(self.ws.query_workers):
-            worker = worker_type(self.ws, self.ts, self.shutdown_event,
-                                 self.ddocs, self.qparams, self.index_type)
+            worker = worker_type(self.ws, self.ts, self.shutdown_event)
             worker_process = Process(
                 target=worker.run,
                 args=(sid, lock, curr_queries, curr_items, deleted_items)

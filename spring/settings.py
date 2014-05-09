@@ -25,6 +25,11 @@ class WorkloadSettings(object):
         self.workers = options.workers
         self.query_workers = 0  # Stub for library compatibility
 
+        self.index_type = None
+        self.ddocs = {}
+        self.qparams = {}
+        self.n1ql = False
+
         self.async = options.async
 
 
