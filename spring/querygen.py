@@ -124,6 +124,11 @@ class NewQueryNG(object):
             'body_by_realm',
             'body_by_country',
         ),
+        'distinct': (
+            'distinct_states',
+            'distinct_full_states',
+            'distinct_years',
+        ),
     }
 
     def __init__(self, index_type, params):
@@ -327,6 +332,21 @@ class NewN1QLQuery(NewQueryNG):
                 FROM {{bucket}}
                 WHERE full_state.f = "{full_state[f]}" and year = {year}
                 GROUP BY full_state.f, year
+                LIMIT 20
+        ''',
+        'distinct_states': '''
+            SELECT SELECT DISTINCT state.f AS state
+                FROM {{bucket}}
+                LIMIT 20
+        ''',
+        'distinct_full_states': '''
+            SELECT DISTINCT full_state.f AS full_state
+                FROM {{bucket}}
+                LIMIT 20
+        ''',
+        'distinct_years': '''
+            SELECT DISTINCT year
+                FROM {{bucket}}
                 LIMIT 20
         ''',
     }
