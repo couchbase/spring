@@ -247,7 +247,6 @@ class SeqUpdatesWorker(Worker):
 class WorkerFactory(object):
 
     def __new__(self, workload_settings):
-
         if getattr(workload_settings, 'async', False):
             return AsyncKVWorker
         if getattr(workload_settings, 'seq_updates', False):
@@ -257,6 +256,15 @@ class WorkerFactory(object):
         if not (getattr(workload_settings, 'seq_updates', False) or
                 getattr(workload_settings, 'seq_reads', False)):
             return KVWorker
+
+
+class QueryWorkerFactory(object):
+
+    def __new__(self, workload_settings):
+        if workload_settings.n1ql:
+            return N1QLWorker
+        else:
+            return QueryWorker
 
 
 class QueryWorker(Worker):
@@ -350,10 +358,7 @@ class WorkloadGen(object):
         curr_queries = Value('L', 0)
         lock = Lock()
 
-        if self.ws.n1ql:
-            worker_type = N1QLWorker
-        else:
-            worker_type = QueryWorker
+        worker_type = QueryWorkerFactory(self.ws)
         self.query_workers = list()
         for sid in range(self.ws.query_workers):
             worker = worker_type(self.ws, self.ts, self.shutdown_event)
