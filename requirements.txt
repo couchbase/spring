@@ -1,4 +1,4 @@
-couchbase==1.2.0
+couchbase==1.2.1
 decorator
 logger
 numpy
