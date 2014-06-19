@@ -168,7 +168,7 @@ class NewDocument(Iterator):
 
     @staticmethod
     def _build_achievements(alphabet):
-        return build_achievements(alphabet)
+        return build_achievements(alphabet) or [0]
 
     @staticmethod
     def _build_body(alphabet, length):
