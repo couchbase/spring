@@ -62,10 +62,11 @@ class CBGen(CBAsyncGen):
         self.client = Connection(timeout=60, quiet=True, **kwargs)
         self.session = requests.Session()
         self.session.auth = (kwargs['username'], kwargs['password'])
-        self.server_nodes = ['{}:{}'.format(kwargs['host'], kwargs['port'])]
+        self.server_nodes = ['{}:{}'.format(kwargs['host'],
+                                            kwargs.get('port', 8091))]
         self.nodes_url = 'http://{}:{}/pools/default/buckets/{}/nodes'.format(
             kwargs['host'],
-            kwargs['port'],
+            kwargs.get('port', 8091),
             kwargs['bucket'],
         )
         self.t = Thread(target=self._get_list_of_servers)
