@@ -293,6 +293,8 @@ class QueryWorker(Worker):
             self.cb.query(ddoc_name, view_name, query=query)
 
     def run(self, sid, lock, curr_queries, curr_items, deleted_items):
+        self.cb.start_updater()
+
         if self.ws.query_throughput < float('inf'):
             self.target_time = float(self.BATCH_SIZE) * self.ws.query_workers / \
                 self.ws.query_throughput

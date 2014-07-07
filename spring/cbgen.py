@@ -69,6 +69,8 @@ class CBGen(CBAsyncGen):
             kwargs.get('port', 8091),
             kwargs['bucket'],
         )
+
+    def start_updater(self):
         self.t = Thread(target=self._get_list_of_servers)
         self.t.daemon = True
         self.t.start()
