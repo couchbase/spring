@@ -7,7 +7,7 @@ Requirements:
 -------------
 
 * Python 2.7 (including headers)
-* libcouchbase
+* [libcouchbase](http://www.couchbase.com/communities/c-client-library)
 * pip or equivalent
 
 Installation
