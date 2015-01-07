@@ -1,6 +1,7 @@
 import time
 from multiprocessing import Process, Value, Lock, Event
 
+from dcp import DcpClient, ResponseHandler
 from decorator import decorator
 from numpy import random
 from couchbase.exceptions import ValueFormatError
@@ -331,6 +332,82 @@ class N1QLWorker(QueryWorker):
         self.cb = N1QLGen(**params)
 
 
+class DcpWorkerFactory(object):
+
+    def __new__(self, workload_settings):
+        return DcpWorker
+
+class DcpHandler(ResponseHandler):
+
+    def __init__(self):
+        ResponseHandler.__init__(self)
+        self.count = 0
+
+    def mutation(self, response):
+        pass
+        self.count +=1
+
+    def deletion(self, response):
+        pass
+        self.count += 1
+
+    def marker(self, response):
+        pass
+
+    def stream_end(self, response):
+        pass
+
+    def get_num_items(self):
+        return self.count
+
+class DcpWorker(Worker):
+
+    def __init__(self, workload_settings, target_settings, shutdown_event=None):
+        super(DcpWorker, self).__init__(workload_settings, target_settings,
+                                        shutdown_event)
+
+    def init_db(self, params):
+        pass
+
+    def run(self, sid):
+        self.sid = sid
+        host, port = self.ts.node.split(':')
+
+        try:
+            self.handler = DcpHandler()
+            self.dcp_client = DcpClient()
+            self.dcp_client.connect(host, int(port), self.ts.bucket,
+                                    'Administrator', 'password',
+                                    self.handler)
+        except:
+            logger.info('Connection Error: dcp-worker-{}'.format(self.sid))
+            return
+
+        logger.info('Started: query-worker-{}'.format(self.sid))
+        for vb in range(1024):
+            start_seqno = 0
+            end_seqno = 18446744073709551615 # 2^64 - 1
+            result = self.dcp_client.add_stream(vb, 0, start_seqno, end_seqno,
+                                                0, 0, 0)
+            assert result['status'] == 0
+
+        no_items = 0
+        last_item_count = 0
+        while no_items < 10 :
+            time.sleep(1)
+            cur_items = self.handler.get_num_items()
+            if cur_items == last_item_count:
+                no_items += 1
+            else:
+                no_items = 0
+            last_item_count = cur_items
+
+        self.dcp_client.close()
+
+        logger.info('Finished: dcp-worker-{}, read {} items'
+                        .format(self.sid, last_item_count))
+
+
 class WorkloadGen(object):
 
     def __init__(self, workload_settings, target_settings, timer=None):
@@ -371,6 +448,21 @@ class WorkloadGen(object):
             worker_process.start()
             self.query_workers.append(worker_process)
 
+    def start_dcp_workers(self):
+        curr_queries = Value('L', 0)
+        lock = Lock()
+
+        worker_type = DcpWorkerFactory(self.ws)
+        self.dcp_workers = list()
+        for sid in range(self.ws.dcp_workers):
+            worker = worker_type(self.ws, self.ts, self.shutdown_event)
+            worker_process = Process(
+                target=worker.run,
+                args=(sid)
+            )
+            worker_process.start()
+            self.dcp_workers.append(worker_process)
+
     def wait_for_workers(self, workers):
         for worker in workers:
             worker.join()
@@ -381,11 +473,15 @@ class WorkloadGen(object):
         curr_items = Value('L', self.ws.items)
         deleted_items = Value('L', 0)
 
+        logger.info('Start all workers')
         self.start_kv_workers(curr_items, deleted_items)
         self.start_query_workers(curr_items, deleted_items)
+        self.start_dcp_workers()
 
         if self.timer:
             time.sleep(self.timer)
             self.shutdown_event.set()
         self.wait_for_workers(self.kv_workers)
         self.wait_for_workers(self.query_workers)
+        self.wait_for_workers(self.dcp_workers)
+

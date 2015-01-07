@@ -4,3 +4,4 @@ logger
 numpy
 requests==2.1.0
 twisted==12.0.0
+git+https://github.com/couchbaselabs/python-dcp-client.git#egg=dcp-client
