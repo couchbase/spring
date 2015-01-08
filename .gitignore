@@ -3,6 +3,10 @@
 *.py[cod]
 *.prof
 
+# virtualenv dir
+
+env/
+
 # C extensions
 *.so
 
