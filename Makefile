@@ -1,5 +1,5 @@
 build: ; \
-    gcc -g -fwrapv -O2 -Wall -Wstrict-prototypes -shared -O2 -fPIC  \
+    gcc -g -fwrapv -O2 -Wall -Wstrict-prototypes -shared -O2 -fPIC -lpython \
     -o fastdocgen.so src/fastdocgen.c \
     -I/usr/include/python2.7
 
