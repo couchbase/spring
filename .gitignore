@@ -1,4 +1,11 @@
+.DS_Store
+*~
 *.py[cod]
+*.prof
+
+# virtualenv dir
+
+env/
 
 # C extensions
 *.so
@@ -15,6 +22,7 @@ var
 sdist
 develop-eggs
 .installed.cfg
+*.so.dSYM
 lib
 lib64
 
