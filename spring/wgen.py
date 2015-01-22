@@ -369,7 +369,7 @@ class DcpWorker(Worker):
     def init_db(self, params):
         pass
 
-    def run(self, sid):
+    def run(self, sid, lock):
         self.sid = sid
         host, port = self.ts.node.split(':')
 
@@ -458,7 +458,7 @@ class WorkloadGen(object):
             worker = worker_type(self.ws, self.ts, self.shutdown_event)
             worker_process = Process(
                 target=worker.run,
-                args=(sid)
+                args=(sid, lock)
             )
             worker_process.start()
             self.dcp_workers.append(worker_process)
