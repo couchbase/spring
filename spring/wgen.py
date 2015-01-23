@@ -389,7 +389,10 @@ class DcpWorker(Worker):
             end_seqno = 18446744073709551615 # 2^64 - 1
             result = self.dcp_client.add_stream(vb, 0, start_seqno, end_seqno,
                                                 0, 0, 0)
-            assert result['status'] == 0
+            if result['status'] != 0:
+                logger.warn('Stream failed for vb {} due to error {}'
+                                .format(vb, result['status']))
+
 
         no_items = 0
         last_item_count = 0
