@@ -62,7 +62,7 @@ def run():
                deleted_items=deleted_items)
 
     worker = DcpWorker(workload_settings, target_settings)
-    worker.run(sid=1)
+    worker.run(1, lock)
 
 def profile():
     pr = cProfile.Profile()
