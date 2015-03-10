@@ -28,10 +28,12 @@ class Iterator(object):
 
 class ExistingKey(Iterator):
 
-    def __init__(self, working_set, working_set_access, prefix):
+    def __init__(self, working_set, working_set_access, prefix, expiration=None):
         self.working_set = working_set
         self.working_set_access = working_set_access
         self.prefix = prefix
+        self.expiration = expiration
+        self.ttls = cycle(range(150, 450, 30))
 
     def next(self, curr_items, curr_deletes):
         num_existing_items = curr_items - curr_deletes
@@ -47,7 +49,12 @@ class ExistingKey(Iterator):
             right_limit = left_limit + num_cold_items
         key = np.random.random_integers(left_limit, right_limit)
         key = '%012d' % key
-        return self.add_prefix(key)
+
+        ttl = None
+        if self.expiration and random.random() < self.expiration:
+            ttl = self.ttls.next()
+
+        return self.add_prefix(key), ttl
 
 
 class SequentialHotKey(Iterator):

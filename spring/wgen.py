@@ -41,7 +41,8 @@ class Worker(object):
 
         self.existing_keys = ExistingKey(self.ws.working_set,
                                          self.ws.working_set_access,
-                                         self.ts.prefix)
+                                         self.ts.prefix,
+                                         self.ws.expiration)
         self.new_keys = NewKey(self.ts.prefix, self.ws.expiration)
         self.keys_for_removal = KeyForRemoval(self.ts.prefix)
 
@@ -110,18 +111,18 @@ class KVWorker(Worker):
                 doc = self.docs.next(key)
                 cmds.append((cb.create, (key, doc, ttl)))
             elif op == 'r':
-                key = self.existing_keys.next(curr_items_spot, deleted_spot)
+                key, _ = self.existing_keys.next(curr_items_spot, deleted_spot)
                 cmds.append((cb.read, (key, )))
             elif op == 'u':
-                key = self.existing_keys.next(curr_items_spot, deleted_spot)
+                key, ttl = self.existing_keys.next(curr_items_spot, deleted_spot)
                 doc = self.docs.next(key)
-                cmds.append((cb.update, (key, doc)))
+                cmds.append((cb.update, (key, doc, ttl)))
             elif op == 'd':
                 deleted_items_tmp += 1
                 key = self.keys_for_removal.next(deleted_items_tmp)
                 cmds.append((cb.delete, (key, )))
             elif op == 'cas':
-                key = self.existing_keys.next(curr_items_spot, deleted_spot)
+                key, _ = self.existing_keys.next(curr_items_spot, deleted_spot)
                 doc = self.docs.next(key)
                 cmds.append((cb.cas, (key, doc)))
         return cmds
@@ -288,7 +289,7 @@ class QueryWorker(Worker):
             self.deleted_items.value + self.ws.deletes * self.ws.workers
 
         for _ in xrange(self.BATCH_SIZE):
-            key = self.existing_keys.next(curr_items_spot, deleted_spot)
+            key, _ = self.existing_keys.next(curr_items_spot, deleted_spot)
             doc = self.docs.next(key)
             ddoc_name, view_name, query = self.new_queries.next(doc)
             self.cb.query(ddoc_name, view_name, query=query)

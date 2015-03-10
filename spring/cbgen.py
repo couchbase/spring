@@ -36,15 +36,15 @@ class CBAsyncGen(object):
 
     def create(self, key, doc, ttl=None):
         extra_params = {}
-        if ttl is None:
+        if ttl:
             extra_params['ttl'] = ttl
         return self.client.set(key, doc, **extra_params)
 
     def read(self, key):
         return self.client.get(key)
 
-    def update(self, key, doc):
-        return self.client.set(key, doc)
+    def update(self, key, doc, ttl=None):
+        return self.create(key, doc, ttl)
 
     def cas(self, key, doc):
         cas = self.client.get(key).cas
