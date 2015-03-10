@@ -80,7 +80,7 @@ class NewKey(Iterator):
         key = '%012d' % curr_items
         key = self.add_prefix(key)
         ttl = None
-        if self.expiration and random.randint(1, 100) <= self.expiration:
+        if self.expiration and random.random() < self.expiration:
             ttl = self.ttls.next()
         return key, ttl
 
