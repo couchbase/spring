@@ -1,3 +1,4 @@
+import array
 import math
 import time
 from hashlib import md5
@@ -9,6 +10,9 @@ import numpy as np
 from spring.states import STATES, NUM_STATES
 
 from fastdocgen import build_achievements
+
+
+ASCII_A_OFFSET = 97
 
 
 class Iterator(object):
@@ -228,3 +232,37 @@ class NewNestedDocument(NewDocument):
             'year': self._build_year(alphabet),
             'body': self._build_body(alphabet, size),
         }
+
+
+class NewDocumentFromSpatialFile(object):
+    """The documents will contain one property per dimension.
+
+    The first dimension are names with characters starting with `a`.
+
+    The loader needs to know how many workers there are, so that every
+    n-th entry (depending on the number of workers) can be read. The
+    ID of the current worker will be set when the worker is started.
+    """
+    # The size (in byte) one dimension takes. It's min and max, both 64-bit
+    # floats
+    DIM_SIZE = 16
+
+    def __init__(self, filename, dim):
+        self.file = open(filename, 'rb')
+        self.dim = dim
+        self.record_size = dim * self.DIM_SIZE
+        # The offset (number of records) the items should be read from
+        # It is set by the worker
+        self.offset = 0
+
+    def __del__(self):
+        self.file.close()
+
+    def next(self, key):
+        self.file.seek(self.record_size * self.offset)
+        mbb = array.array('d')
+        mbb.fromfile(self.file, self.dim * 2)
+        doc = {}
+        for i in range(self.dim):
+            doc[chr(ASCII_A_OFFSET + i)] = [mbb[i * 2], mbb[i * 2 + 1]]
+        return doc

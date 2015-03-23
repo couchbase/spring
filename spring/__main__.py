@@ -86,6 +86,14 @@ class CLIParser(ArgumentParser):
         )
         self.add_argument('--async', action='store_true', default=False,
                           help='enable asynchronous mode')
+        self.add_argument(
+            '-f', dest='filename', type=str, default='', metavar='',
+            help='file to use as input (instead of a document generator)'
+        )
+        self.add_argument(
+            '-m', dest='dimensionality', type=int, default=0, metavar='',
+            help='dimensionality of the data',
+        )
 
     def parse_args(self, *args):
         args = super(CLIParser, self).parse_args()
