@@ -10,7 +10,8 @@ from twisted.internet import reactor
 
 from spring.cbgen import CBGen, CBAsyncGen, N1QLGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
-                           NewKey, NewDocument, NewNestedDocument)
+                           NewKey, NewDocument, NewNestedDocument,
+                           NewDocumentFromSpatialFile)
 from spring.querygen import ViewQueryGen, ViewQueryGenByType, N1QLQueryGen
 
 
@@ -52,8 +53,12 @@ class Worker(object):
                     self.ws['extra_doc_fields'] == 'yes'):
                 extra_fields = True
             self.docs = NewDocument(self.ws.size, extra_fields)
-        else:
+        elif self.ws.doc_gen == 'new':
             self.docs = NewNestedDocument(self.ws.size)
+        elif self.ws.doc_gen == 'spatial':
+            self.docs = NewDocumentFromSpatialFile(
+                self.ws.spatial.data,
+                self.ws.spatial.dimensionality)
 
         self.next_report = 0.05  # report after every 5% of completion
 
@@ -109,6 +114,11 @@ class KVWorker(Worker):
 
         if not cb:
             cb = self.cb
+
+        # If a file is used as input for the data, make sure the workers
+        # read from the correct file offset
+        if self.ws.spatial and self.ws.spatial.data:
+            self.docs.offset = curr_items_tmp
 
         cmds = []
         for op in ops:
