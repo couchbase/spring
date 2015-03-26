@@ -28,9 +28,9 @@ class WorkloadSettings(object):
         self.dcp_workers = 0  # Stub for library compatibility
 
         self.index_type = None
+        self.index_mode = 'mapreduce'
         self.ddocs = {}
         self.qparams = {}
-        self.n1ql = False
 
         self.async = options.async
 
@@ -39,6 +39,7 @@ class WorkloadSettings(object):
         self.dimensionality = options.dimensionality
         if self.dimensionality:
             self.doc_gen = 'spatial'
+            self.index_mode = 'spatial'
         if self.doc_gen == 'spatial' and self.filename:
             length = os.path.getsize(self.filename)
             # doubles are 8 byte each and we have one for high and one for low

@@ -276,7 +276,7 @@ class WorkerFactory(object):
 class QueryWorkerFactory(object):
 
     def __new__(self, workload_settings):
-        if workload_settings.n1ql:
+        if workload_settings.index_mode == 'n1ql':
             return N1QLWorker
         else:
             return QueryWorker

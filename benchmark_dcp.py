@@ -31,7 +31,7 @@ workload_settings = type(
         'query_workers': 0,
         'dcp_workers': 0,
 
-        'n1ql': False
+        'index_mode': 'mapreduce'
         }
     )()
 
