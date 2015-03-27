@@ -28,12 +28,25 @@ class Iterator(object):
 
 class ExistingKey(Iterator):
 
-    def __init__(self, working_set, working_set_access, prefix, expiration=None):
+    def __init__(self, working_set, working_set_access, prefix,
+                 expiration_pcnt=0.0, expiration_ttl=None):
+        """Construct an Iterator over an existing set of keys.
+
+        Args:
+          working_set (int): percentage of items in working set.
+          working_set_access (int): percentage of operations that hit
+            working set.
+          prefix (str): Key prefix.
+          expiration_pcnt (float, optional): What percentage of keys
+            should have an expiration set. Defaults to zero.
+          expiration_ttl (int, optional): If expiration_pcnt is non-zero,
+            what TTL value should be used.
+        """
         self.working_set = working_set
         self.working_set_access = working_set_access
         self.prefix = prefix
-        self.expiration = expiration
-        self.ttls = cycle(range(150, 450, 30))
+        self.expiration_pcnt = expiration_pcnt
+        self.ttl = expiration_ttl
 
     def next(self, curr_items, curr_deletes):
         num_existing_items = curr_items - curr_deletes
@@ -51,8 +64,8 @@ class ExistingKey(Iterator):
         key = '%012d' % key
 
         ttl = None
-        if self.expiration and random.random() < self.expiration:
-            ttl = self.ttls.next()
+        if self.expiration_pcnt and random.random() < self.expiration_pcnt:
+            ttl = self.ttl
 
         return self.add_prefix(key), ttl
 
@@ -78,17 +91,26 @@ class SequentialHotKey(Iterator):
 
 class NewKey(Iterator):
 
-    def __init__(self, prefix, expiration):
+    def __init__(self, prefix, expiration_pcnt=0.0, expiration_ttl=None):
         self.prefix = prefix
-        self.expiration = expiration
-        self.ttls = cycle(range(150, 450, 30))
+        """Construct an Iterator over a new set of keys.
+
+        Args:
+          prefix (str): Key prefix.
+          expiration_pcnt (float, optional): What percentage of keys
+            should have an expiration set. Defaults to zero.
+          expiration_ttl (int, optional): If expiration_pcnt is non-zero,
+            what TTL value should be used.
+        """
+        self.expiration_pcnt = expiration_pcnt
+        self.ttl = expiration_ttl
 
     def next(self, curr_items):
         key = '%012d' % curr_items
         key = self.add_prefix(key)
         ttl = None
-        if self.expiration and random.random() < self.expiration:
-            ttl = self.ttls.next()
+        if self.expiration_pcnt and random.random() < self.expiration_pcnt:
+            ttl = self.ttl
         return key, ttl
 
 

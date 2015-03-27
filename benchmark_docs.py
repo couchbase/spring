@@ -8,7 +8,7 @@ from spring.docgen import NewNestedDocument, NewKey
 
 
 def generate_keys():
-    new_keys = NewKey(prefix=None, expiration=0)
+    new_keys = NewKey(prefix=None)
     return tuple(new_keys.next(i)[0] for i in xrange(50000))
 
 

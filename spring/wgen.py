@@ -42,8 +42,10 @@ class Worker(object):
         self.existing_keys = ExistingKey(self.ws.working_set,
                                          self.ws.working_set_access,
                                          self.ts.prefix,
-                                         self.ws.expiration)
-        self.new_keys = NewKey(self.ts.prefix, self.ws.expiration)
+                                         self.ws.expiration_pcnt,
+                                         self.ws.expiration_ttl)
+        self.new_keys = NewKey(self.ts.prefix, self.ws.expiration_pcnt,
+                               self.ws.expiration_ttl)
         self.keys_for_removal = KeyForRemoval(self.ts.prefix)
 
         if not hasattr(self.ws, 'doc_gen') or self.ws.doc_gen == 'old':
