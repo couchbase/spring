@@ -124,7 +124,8 @@ class N1QlTsts(unittest.TestCase):
     def test_query_formatting(self):
         docgen = NewNestedDocument(avg_size=self.SIZE)
         doc = docgen.next('test-key')
-        queries = ['SELECT * from `bucket-1`;', 'SELECT count(*) from `bucket-1`;']
+        queries = ['SELECT * from `bucket-1`;',
+                   'SELECT count(*) from `bucket-1`;']
         qgen = N1QLQueryGen(queries=queries)
         _, _, query = qgen.next(doc)
         query.format(bucket='bucket-1')

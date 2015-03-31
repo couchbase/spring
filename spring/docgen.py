@@ -106,7 +106,8 @@ class NewDocument(Iterator):
 
     @classmethod
     def _get_variation_coeff(cls):
-        return np.random.uniform(1 - cls.SIZE_VARIATION, 1 + cls.SIZE_VARIATION)
+        return np.random.uniform(1 - cls.SIZE_VARIATION,
+                                 1 + cls.SIZE_VARIATION)
 
     @staticmethod
     def _build_alphabet(key):
@@ -180,7 +181,7 @@ class NewDocument(Iterator):
 
     @staticmethod
     def _build_extras(alphabet, length):
-        return alphabet[0:length];
+        return alphabet[0:length]
 
     def next(self, key):
         next_length = self._get_variation_coeff() * self.avg_size
@@ -235,13 +236,13 @@ class NewNestedDocument(NewDocument):
             return 2048 / np.random.beta(a=2.2, b=1.0)
 
     def _capped_field(self, key, num_unique):
-        # Assumes the last 12 characters are digits and monotonically increasing
+        # Assumes the last 12 characters are digits and
+        # monotonically increasing
         try:
             index = (int(key[-12:]) + 1) / num_unique
             return '{}_{}'.format(num_unique, index)
-        except Exception, e:
+        except Exception:
             return 'Invalid Key for capped field'
-
 
     def next(self, key):
         alphabet = self._build_alphabet(key)
