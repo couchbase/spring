@@ -50,7 +50,8 @@ class CLIParser(ArgumentParser):
             help='total number of operations (infinity by default)'
         )
         self.add_argument(
-            '-t', dest='throughput', type=int, default=float('inf'), metavar='',
+            '-t', dest='throughput', type=int, default=float('inf'),
+            metavar='',
             help='target operations throughput (infinity by default)'
         )
         self.add_argument(
@@ -71,7 +72,8 @@ class CLIParser(ArgumentParser):
         )
         self.add_argument(
             '-W', dest='working_set_access', type=int, default=100, metavar='',
-            help='percentage of operations that hit working set, 100 by default'
+            help=('percentage of operations that hit working set, '
+                  '100 by default')
         )
         self.add_argument(
             '-n', dest='workers', type=int, default=1, metavar='',
@@ -84,6 +86,14 @@ class CLIParser(ArgumentParser):
         )
         self.add_argument('--async', action='store_true', default=False,
                           help='enable asynchronous mode')
+        self.add_argument(
+            '-f', dest='filename', type=str, default='', metavar='',
+            help='file to use as input (instead of a document generator)'
+        )
+        self.add_argument(
+            '-m', dest='dimensionality', type=int, default=0, metavar='',
+            help='dimensionality of the data',
+        )
 
     def parse_args(self, *args):
         args = super(CLIParser, self).parse_args()
