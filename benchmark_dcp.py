@@ -9,43 +9,43 @@ from spring.wgen import AsyncKVWorker, DcpWorker
 
 
 workload_settings = type(
-                         'WorkloadSettings',
-                         (object, ),
-                         {
-                         'creates': 0,
-                         'reads': 0,
-                         'updates': 100,
-                         'deletes': 0,
-                         'cases': 0,
-                         
-                         'ops': 50000,
-                         'throughput': float('inf'),
-                         
-                         'size': 2048,
-                         'items': 10000,
-                         'expiration': 0,
-                         'working_set': 100,
-                         'working_set_access': 100,
-                         
-                         'workers': 1,
-                         'query_workers': 0,
-                         'dcp_workers': 0,
+    'WorkloadSettings',
+    (object, ),
+    {
+        'creates': 0,
+        'reads': 0,
+        'updates': 100,
+        'deletes': 0,
+        'cases': 0,
 
-                         'n1ql': False
-                         }
-                         )()
+        'ops': 50000,
+        'throughput': float('inf'),
+
+        'size': 2048,
+        'items': 10000,
+        'expiration': 0,
+        'working_set': 100,
+        'working_set_access': 100,
+
+        'workers': 1,
+        'query_workers': 0,
+        'dcp_workers': 0,
+
+        'index_mode': 'mapreduce'
+        }
+    )()
 
 target_settings = type(
-                       'TargetSettings',
-                       (object, ),
-                       {
-                       'node': '127.0.0.1:8091',
-                       'bucket': 'default',
-                       'username': '',
-                       'password': '',
-                       'prefix': None,
-                       }
-                       )
+    'TargetSettings',
+    (object, ),
+    {
+        'node': '127.0.0.1:8091',
+        'bucket': 'default',
+        'username': '',
+        'password': '',
+        'prefix': None,
+        }
+    )
 
 
 def run():
@@ -64,14 +64,15 @@ def run():
     worker = DcpWorker(workload_settings, target_settings)
     worker.run(1, lock)
 
+
 def profile():
     pr = cProfile.Profile()
     s = StringIO.StringIO()
-    
+
     pr.enable()
     run()
     pr.disable()
-    
+
     ps = pstats.Stats(pr, stream=s).sort_stats('tottime')
     ps.reverse_order()
     ps.print_stats()
