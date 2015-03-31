@@ -105,7 +105,8 @@ class NewDocument(Iterator):
 
     @classmethod
     def _get_variation_coeff(cls):
-        return np.random.uniform(1 - cls.SIZE_VARIATION, 1 + cls.SIZE_VARIATION)
+        return np.random.uniform(1 - cls.SIZE_VARIATION,
+                                 1 + cls.SIZE_VARIATION)
 
     @staticmethod
     def _build_alphabet(key):

@@ -34,7 +34,8 @@ class Worker(object):
 
     BATCH_SIZE = 100
 
-    def __init__(self, workload_settings, target_settings, shutdown_event=None):
+    def __init__(self, workload_settings, target_settings,
+                 shutdown_event=None):
         self.ws = workload_settings
         self.ts = target_settings
         self.shutdown_event = shutdown_event
@@ -54,7 +55,8 @@ class Worker(object):
 
         host, port = self.ts.node.split(':')
         self.init_db({'bucket': self.ts.bucket, 'host': host, 'port': port,
-                      'username': self.ts.bucket, 'password': self.ts.password})
+                      'username': self.ts.bucket,
+                      'password': self.ts.password})
 
     def init_db(self, params):
         try:
@@ -90,14 +92,16 @@ class KVWorker(Worker):
             with self.lock:
                 self.curr_items.value += self.ws.creates
                 curr_items_tmp = self.curr_items.value - self.ws.creates
-            curr_items_spot = curr_items_tmp - self.ws.creates * self.ws.workers
+            curr_items_spot = (curr_items_tmp -
+                               self.ws.creates * self.ws.workers)
 
         deleted_items_tmp = deleted_spot = 0
         if self.ws.deletes:
             with self.lock:
                 self.deleted_items.value += self.ws.deletes
                 deleted_items_tmp = self.deleted_items.value - self.ws.deletes
-            deleted_spot = deleted_items_tmp + self.ws.deletes * self.ws.workers
+            deleted_spot = (deleted_items_tmp +
+                            self.ws.deletes * self.ws.workers)
 
         if not cb:
             cb = self.cb
@@ -173,7 +177,8 @@ class AsyncKVWorker(KVWorker):
                     time.sleep(self.CORRECTION_FACTOR * delta)
 
             self.report_progress(self.curr_ops.value)
-            if not self.done and (self.curr_ops.value >= self.ws.ops or self.time_to_stop()):
+            if not self.done and (
+                    self.curr_ops.value >= self.ws.ops or self.time_to_stop()):
                 with self.lock:
                     self.done = True
                 logger.info('Finished: worker-{}'.format(self.sid))
@@ -212,7 +217,8 @@ class AsyncKVWorker(KVWorker):
 
     def run(self, sid, lock, curr_ops, curr_items, deleted_items):
         if self.ws.throughput < float('inf'):
-            self.target_time = self.BATCH_SIZE * self.ws.workers / float(self.ws.throughput)
+            self.target_time = (self.BATCH_SIZE * self.ws.workers /
+                                float(self.ws.throughput))
         else:
             self.target_time = None
         self.sid = sid
@@ -337,6 +343,7 @@ class DcpWorkerFactory(object):
     def __new__(self, workload_settings):
         return DcpWorker
 
+
 class DcpHandler(ResponseHandler):
 
     def __init__(self):
@@ -345,7 +352,7 @@ class DcpHandler(ResponseHandler):
 
     def mutation(self, response):
         pass
-        self.count +=1
+        self.count += 1
 
     def deletion(self, response):
         pass
@@ -360,9 +367,11 @@ class DcpHandler(ResponseHandler):
     def get_num_items(self):
         return self.count
 
+
 class DcpWorker(Worker):
 
-    def __init__(self, workload_settings, target_settings, shutdown_event=None):
+    def __init__(self, workload_settings, target_settings,
+                 shutdown_event=None):
         super(DcpWorker, self).__init__(workload_settings, target_settings,
                                         shutdown_event)
 
@@ -386,17 +395,16 @@ class DcpWorker(Worker):
         logger.info('Started: query-worker-{}'.format(self.sid))
         for vb in range(1024):
             start_seqno = 0
-            end_seqno = 18446744073709551615 # 2^64 - 1
+            end_seqno = 18446744073709551615  # 2^64 - 1
             result = self.dcp_client.add_stream(vb, 0, start_seqno, end_seqno,
                                                 0, 0, 0)
             if result['status'] != 0:
                 logger.warn('Stream failed for vb {} due to error {}'
-                                .format(vb, result['status']))
-
+                            .format(vb, result['status']))
 
         no_items = 0
         last_item_count = 0
-        while no_items < 10 :
+        while no_items < 10:
             time.sleep(1)
             cur_items = self.handler.get_num_items()
             if cur_items == last_item_count:
@@ -408,7 +416,7 @@ class DcpWorker(Worker):
         self.dcp_client.close()
 
         logger.info('Finished: dcp-worker-{}, read {} items'
-                        .format(self.sid, last_item_count))
+                    .format(self.sid, last_item_count))
 
 
 class WorkloadGen(object):
@@ -452,7 +460,6 @@ class WorkloadGen(object):
             self.query_workers.append(worker_process)
 
     def start_dcp_workers(self):
-        curr_queries = Value('L', 0)
         lock = Lock()
 
         worker_type = DcpWorkerFactory(self.ws)
@@ -487,4 +494,3 @@ class WorkloadGen(object):
         self.wait_for_workers(self.kv_workers)
         self.wait_for_workers(self.query_workers)
         self.wait_for_workers(self.dcp_workers)
-
