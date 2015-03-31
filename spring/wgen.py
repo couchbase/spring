@@ -8,10 +8,12 @@ from couchbase.exceptions import ValueFormatError
 from logger import logger
 from twisted.internet import reactor
 
-from spring.cbgen import CBGen, CBAsyncGen, N1QLGen
+from spring.cbgen import CBGen, CBAsyncGen, N1QLGen, SpatialGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
-                           NewKey, NewDocument, NewNestedDocument)
-from spring.querygen import NewQuery, NewQueryNG, NewN1QLQuery
+                           NewKey, NewDocument, NewNestedDocument,
+                           NewDocumentFromSpatialFile)
+from spring.querygen import (NewQuery, NewQueryNG, NewN1QLQuery,
+                             NewSpatialQueryFromFile)
 
 
 @decorator
@@ -34,7 +36,8 @@ class Worker(object):
 
     BATCH_SIZE = 100
 
-    def __init__(self, workload_settings, target_settings, shutdown_event=None):
+    def __init__(self, workload_settings, target_settings,
+                 shutdown_event=None):
         self.ws = workload_settings
         self.ts = target_settings
         self.shutdown_event = shutdown_event
@@ -47,14 +50,18 @@ class Worker(object):
 
         if not hasattr(self.ws, 'doc_gen') or self.ws.doc_gen == 'old':
             self.docs = NewDocument(self.ws.size)
-        else:
+        elif self.ws.doc_gen == 'new':
             self.docs = NewNestedDocument(self.ws.size)
+        elif self.ws.doc_gen == 'spatial':
+            self.docs = NewDocumentFromSpatialFile(self.ws.filename,
+                                                   self.ws.dimensionality)
 
         self.next_report = 0.05  # report after every 5% of completion
 
         host, port = self.ts.node.split(':')
         self.init_db({'bucket': self.ts.bucket, 'host': host, 'port': port,
-                      'username': self.ts.bucket, 'password': self.ts.password})
+                      'username': self.ts.bucket,
+                      'password': self.ts.password})
 
     def init_db(self, params):
         try:
@@ -90,17 +97,23 @@ class KVWorker(Worker):
             with self.lock:
                 self.curr_items.value += self.ws.creates
                 curr_items_tmp = self.curr_items.value - self.ws.creates
-            curr_items_spot = curr_items_tmp - self.ws.creates * self.ws.workers
+            curr_items_spot = (curr_items_tmp -
+                               self.ws.creates * self.ws.workers)
 
         deleted_items_tmp = deleted_spot = 0
         if self.ws.deletes:
             with self.lock:
                 self.deleted_items.value += self.ws.deletes
                 deleted_items_tmp = self.deleted_items.value - self.ws.deletes
-            deleted_spot = deleted_items_tmp + self.ws.deletes * self.ws.workers
+            deleted_spot = (deleted_items_tmp +
+                            self.ws.deletes * self.ws.workers)
 
         if not cb:
             cb = self.cb
+
+        # Make sure the workers read from the correct file offset
+        if self.ws.filename:
+            self.docs.offset = curr_items_tmp
 
         cmds = []
         for op in ops:
@@ -173,7 +186,8 @@ class AsyncKVWorker(KVWorker):
                     time.sleep(self.CORRECTION_FACTOR * delta)
 
             self.report_progress(self.curr_ops.value)
-            if not self.done and (self.curr_ops.value >= self.ws.ops or self.time_to_stop()):
+            if not self.done and (
+                    self.curr_ops.value >= self.ws.ops or self.time_to_stop()):
                 with self.lock:
                     self.done = True
                 logger.info('Finished: worker-{}'.format(self.sid))
@@ -212,7 +226,8 @@ class AsyncKVWorker(KVWorker):
 
     def run(self, sid, lock, curr_ops, curr_items, deleted_items):
         if self.ws.throughput < float('inf'):
-            self.target_time = self.BATCH_SIZE * self.ws.workers / float(self.ws.throughput)
+            self.target_time = (self.BATCH_SIZE * self.ws.workers /
+                                float(self.ws.throughput))
         else:
             self.target_time = None
         self.sid = sid
@@ -262,10 +277,12 @@ class WorkerFactory(object):
 class QueryWorkerFactory(object):
 
     def __new__(self, workload_settings):
-        if workload_settings.n1ql:
+        if workload_settings.index_mode == 'n1ql':
             return N1QLWorker
-        else:
+        elif workload_settings.index_mode == 'mapreduce':
             return QueryWorker
+        elif workload_settings.index_mode == 'spatial':
+            return SpatialWorker
 
 
 class QueryWorker(Worker):
@@ -304,6 +321,7 @@ class QueryWorker(Worker):
         self.sid = sid
         self.curr_items = curr_items
         self.deleted_items = deleted_items
+        self.curr_queries = curr_queries
 
         try:
             logger.info('Started: query-worker-{}'.format(self.sid))
@@ -332,10 +350,35 @@ class N1QLWorker(QueryWorker):
         self.cb = N1QLGen(**params)
 
 
+class SpatialWorker(QueryWorker):
+
+    def __init__(self, workload_settings, target_settings, shutdown_event):
+        super(QueryWorker, self).__init__(workload_settings, target_settings,
+                                          shutdown_event)
+        self.new_queries = NewSpatialQueryFromFile(
+            workload_settings.filename,
+            workload_settings.dimensionality,
+            workload_settings.index_type,
+            workload_settings.qparams)
+
+        host, port = self.ts.node.split(':')
+        params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
+                  'username': self.ts.bucket, 'password': self.ts.password}
+        self.cb = SpatialGen(**params)
+
+    @with_sleep
+    def do_batch(self):
+        for i in xrange(self.BATCH_SIZE):
+            offset = self.curr_queries.value - self.BATCH_SIZE + i
+            ddoc_name, view_name, query = self.new_queries.next(offset)
+            self.cb.query(ddoc_name, view_name, query=query)
+
+
 class DcpWorkerFactory(object):
 
     def __new__(self, workload_settings):
         return DcpWorker
+
 
 class DcpHandler(ResponseHandler):
 
@@ -345,7 +388,7 @@ class DcpHandler(ResponseHandler):
 
     def mutation(self, response):
         pass
-        self.count +=1
+        self.count += 1
 
     def deletion(self, response):
         pass
@@ -360,9 +403,11 @@ class DcpHandler(ResponseHandler):
     def get_num_items(self):
         return self.count
 
+
 class DcpWorker(Worker):
 
-    def __init__(self, workload_settings, target_settings, shutdown_event=None):
+    def __init__(self, workload_settings, target_settings,
+                 shutdown_event=None):
         super(DcpWorker, self).__init__(workload_settings, target_settings,
                                         shutdown_event)
 
@@ -386,17 +431,16 @@ class DcpWorker(Worker):
         logger.info('Started: query-worker-{}'.format(self.sid))
         for vb in range(1024):
             start_seqno = 0
-            end_seqno = 18446744073709551615 # 2^64 - 1
+            end_seqno = 18446744073709551615  # 2^64 - 1
             result = self.dcp_client.add_stream(vb, 0, start_seqno, end_seqno,
                                                 0, 0, 0)
             if result['status'] != 0:
                 logger.warn('Stream failed for vb {} due to error {}'
-                                .format(vb, result['status']))
-
+                            .format(vb, result['status']))
 
         no_items = 0
         last_item_count = 0
-        while no_items < 10 :
+        while no_items < 10:
             time.sleep(1)
             cur_items = self.handler.get_num_items()
             if cur_items == last_item_count:
@@ -408,7 +452,7 @@ class DcpWorker(Worker):
         self.dcp_client.close()
 
         logger.info('Finished: dcp-worker-{}, read {} items'
-                        .format(self.sid, last_item_count))
+                    .format(self.sid, last_item_count))
 
 
 class WorkloadGen(object):
@@ -452,7 +496,6 @@ class WorkloadGen(object):
             self.query_workers.append(worker_process)
 
     def start_dcp_workers(self):
-        curr_queries = Value('L', 0)
         lock = Lock()
 
         worker_type = DcpWorkerFactory(self.ws)
@@ -487,4 +530,3 @@ class WorkloadGen(object):
         self.wait_for_workers(self.kv_workers)
         self.wait_for_workers(self.query_workers)
         self.wait_for_workers(self.dcp_workers)
-

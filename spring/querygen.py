@@ -1,4 +1,7 @@
+import array
 from itertools import cycle
+import json
+import os
 
 from numpy import random
 from couchbase.views.params import Query
@@ -361,3 +364,55 @@ class NewN1QLQuery(NewQueryNG):
         view_name = self.view_sequence.next()
         query = self.QUERIES[view_name].format(**doc)
         return None, None, query
+
+
+class NewSpatialQueryFromFile(object):
+    # The size (in byte) one dimension takes. It's min and max, both 64-bit
+    # floats
+    DIM_SIZE = 16
+
+    PARAMS = {
+        'limit': 20,
+        'stale': 'update_after',
+    }
+
+    DDOC_NAME = 'ddoc'
+
+    VIEWS_PER_TYPE = {
+        '2d': (
+            'two_dimensions',
+        ),
+        '3d': (
+            'three_dimensions',
+        ),
+    }
+
+    def __init__(self, filename, dim, index_type, params):
+        self.file = open(filename, 'rb')
+        self.dim = dim
+        self.record_size = dim * self.DIM_SIZE
+        self.max_queries = int(os.path.getsize(filename) / self.record_size)
+        self.params = dict(self.PARAMS, **params)
+        self.view_sequence = cycle(self.VIEWS_PER_TYPE[index_type])
+
+    def __del__(self):
+        self.file.close()
+
+    def generate_params(self, offset):
+        offset = offset % self.max_queries
+        self.file.seek(self.record_size * offset)
+        mbb = array.array('d')
+        mbb.fromfile(self.file, self.dim * 2)
+        start_range = []
+        end_range = []
+        for i in range(0, self.dim * 2, 2):
+            start_range.append(mbb[i])
+            end_range.append(mbb[i + 1])
+        return {'start_range': json.dumps(start_range, separators=(',', ':')),
+                'end_range': json.dumps(end_range, separators=(',', ':'))}
+
+    def next(self, offset):
+        view_name = self.view_sequence.next()
+        params = self.generate_params(offset)
+        params = dict(self.params, **params)
+        return self.DDOC_NAME, view_name, params
