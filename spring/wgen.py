@@ -8,11 +8,12 @@ from couchbase.exceptions import ValueFormatError
 from logger import logger
 from twisted.internet import reactor
 
-from spring.cbgen import CBGen, CBAsyncGen, N1QLGen
+from spring.cbgen import CBGen, CBAsyncGen, N1QLGen, SpatialGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
                            NewKey, NewDocument, NewNestedDocument,
                            NewDocumentFromSpatialFile)
-from spring.querygen import NewQuery, NewQueryNG, NewN1QLQuery
+from spring.querygen import (NewQuery, NewQueryNG, NewN1QLQuery,
+                             NewSpatialQueryFromFile)
 
 
 @decorator
@@ -278,8 +279,10 @@ class QueryWorkerFactory(object):
     def __new__(self, workload_settings):
         if workload_settings.index_mode == 'n1ql':
             return N1QLWorker
-        else:
+        elif workload_settings.index_mode == 'mapreduce':
             return QueryWorker
+        elif workload_settings.index_mode == 'spatial':
+            return SpatialWorker
 
 
 class QueryWorker(Worker):
@@ -318,6 +321,7 @@ class QueryWorker(Worker):
         self.sid = sid
         self.curr_items = curr_items
         self.deleted_items = deleted_items
+        self.curr_queries = curr_queries
 
         try:
             logger.info('Started: query-worker-{}'.format(self.sid))
@@ -344,6 +348,30 @@ class N1QLWorker(QueryWorker):
         params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
                   'username': self.ts.bucket, 'password': self.ts.password}
         self.cb = N1QLGen(**params)
+
+
+class SpatialWorker(QueryWorker):
+
+    def __init__(self, workload_settings, target_settings, shutdown_event):
+        super(QueryWorker, self).__init__(workload_settings, target_settings,
+                                          shutdown_event)
+        self.new_queries = NewSpatialQueryFromFile(
+            workload_settings.filename,
+            workload_settings.dimensionality,
+            workload_settings.index_type,
+            workload_settings.qparams)
+
+        host, port = self.ts.node.split(':')
+        params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
+                  'username': self.ts.bucket, 'password': self.ts.password}
+        self.cb = SpatialGen(**params)
+
+    @with_sleep
+    def do_batch(self):
+        for i in xrange(self.BATCH_SIZE):
+            offset = self.curr_queries.value - self.BATCH_SIZE + i
+            ddoc_name, view_name, query = self.new_queries.next(offset)
+            self.cb.query(ddoc_name, view_name, query=query)
 
 
 class DcpWorkerFactory(object):

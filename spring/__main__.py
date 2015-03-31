@@ -46,6 +46,10 @@ class CLIParser(ArgumentParser):
             help='percentage of new items that expire (0 by default)',
         )
         self.add_argument(
+            '-q', dest='index_type', type=str, default=None, metavar='',
+            help='query the given index instead of doing CRUD operations',
+        )
+        self.add_argument(
             '-o', dest='ops', type=int, default=float('inf'), metavar='',
             help='total number of operations (infinity by default)'
         )
@@ -99,8 +103,8 @@ class CLIParser(ArgumentParser):
         args = super(CLIParser, self).parse_args()
 
         percentages = [args.creates, args.reads, args.updates, args.deletes]
-        if filter(lambda p: not 0 <= p <= 100, percentages) or \
-                sum(percentages) != 100:
+        if (filter(lambda p: not 0 <= p <= 100, percentages) or
+                sum(percentages) != 100) and not args.index_type:
             self.error('Invalid operation [-c, -r, -u, -d] percentage')
 
         if not 0 <= args.working_set <= 100:

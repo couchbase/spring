@@ -27,7 +27,7 @@ class WorkloadSettings(object):
         self.query_workers = 0  # Stub for library compatibility
         self.dcp_workers = 0  # Stub for library compatibility
 
-        self.index_type = None
+        self.index_type = options.index_type
         self.index_mode = 'mapreduce'
         self.ddocs = {}
         self.qparams = {}
@@ -40,10 +40,22 @@ class WorkloadSettings(object):
         if self.dimensionality:
             self.doc_gen = 'spatial'
             self.index_mode = 'spatial'
-        if self.doc_gen == 'spatial' and self.filename:
+            self.index_type = options.index_type
+        if (self.doc_gen == 'spatial' and self.filename and
+                not options.index_type):
             length = os.path.getsize(self.filename)
             # doubles are 8 byte each and we have one for high and one for low
             self.ops = int(length / (self.dimensionality * 8 * 2))
+
+        if options.index_type:
+            self.creates = 0
+            self.reads = 0
+            self.updates = 0
+            self.deletes = 0
+            self.expiration = 0
+            self.workers = 0
+            self.query_workers = options.workers
+            self.query_throughput = options.throughput
 
 
 class TargetSettings(object):

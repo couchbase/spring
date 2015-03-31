@@ -135,3 +135,16 @@ class N1QLGen(CBGen):
         resp = self.session.post(url=url, data=query)
         latency = time() - t0
         return resp.text, latency
+
+
+class SpatialGen(CBGen):
+
+    def query(self, ddoc, view, query):
+        node = choice(self.server_nodes).replace('8091', '8092')
+        url = 'http://{}/{}/_design/{}/_spatial/{}'.format(
+            node, self.client.bucket, ddoc, view
+        )
+        t0 = time()
+        resp = self.session.get(url=url, params=query)
+        latency = time() - t0
+        return resp.text, latency
