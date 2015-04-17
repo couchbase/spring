@@ -11,7 +11,7 @@ from twisted.internet import reactor
 from spring.cbgen import CBGen, CBAsyncGen, N1QLGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
                            NewKey, NewDocument, NewNestedDocument)
-from spring.querygen import NewQuery, NewQueryNG, NewN1QLQuery
+from spring.querygen import ViewQueryGen, ViewQueryGenByType, NewN1QLQuery
 
 
 @decorator
@@ -274,11 +274,11 @@ class QueryWorker(Worker):
         super(QueryWorker, self).__init__(workload_settings, target_settings,
                                           shutdown_event)
         if workload_settings.index_type is None:
-            self.new_queries = NewQuery(workload_settings.ddocs,
+            self.new_queries = ViewQueryGen(workload_settings.ddocs,
                                         workload_settings.qparams)
         else:
-            self.new_queries = NewQueryNG(workload_settings.index_type,
-                                          workload_settings.qparams)
+            self.new_queries = ViewQueryGenByType(workload_settings.index_type,
+                                                  workload_settings.qparams)
 
     @with_sleep
     def do_batch(self):

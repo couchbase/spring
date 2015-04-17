@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 
 from spring.docgen import NewNestedDocument, SequentialHotKey
-from spring.querygen import NewN1QLQuery, NewQueryNG
+from spring.querygen import NewN1QLQuery, ViewQueryGenByType
 
 from fastdocgen import build_achievements
 
@@ -122,7 +122,7 @@ class N1QlTsts(unittest.TestCase):
     def test_query_formatting(self):
         docgen = NewNestedDocument(avg_size=self.SIZE)
         doc = docgen.next('test-key')
-        for index_type in NewQueryNG.VIEWS_PER_TYPE:
+        for index_type in ViewQueryGenByType.VIEWS_PER_TYPE:
             if index_type == 'compute':
                 continue
             qgen = NewN1QLQuery(index_type=index_type)

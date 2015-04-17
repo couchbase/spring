@@ -4,7 +4,7 @@ from numpy import random
 from couchbase.views.params import Query
 
 
-class NewQuery(object):
+class ViewQueryGen(object):
 
     PARAMS = {
         'limit': 30,
@@ -84,7 +84,7 @@ class NewQuery(object):
         return ddoc_name, view_name, Query(**params)
 
 
-class NewQueryNG(object):
+class ViewQueryGenByType(object):
 
     PARAMS = {
         'limit': 20,
@@ -209,7 +209,7 @@ class NewQueryNG(object):
         return self.DDOC_NAME, view_name, Query(**params)
 
 
-class NewN1QLQuery(NewQueryNG):
+class NewN1QLQuery(ViewQueryGenByType):
 
     QUERIES = {
         'name_and_street_by_city': '''
