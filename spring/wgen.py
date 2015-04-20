@@ -259,13 +259,13 @@ class WorkerFactory(object):
             return KVWorker
 
 
-class QueryWorkerFactory(object):
+class ViewWorkerFactory(object):
 
     def __new__(self, workload_settings):
         if workload_settings.n1ql:
             return OldN1QLWorker
         else:
-            return QueryWorker
+            return ViewWorker
 
 
 class QueryWorker(Worker):
@@ -273,12 +273,6 @@ class QueryWorker(Worker):
     def __init__(self, workload_settings, target_settings, shutdown_event):
         super(QueryWorker, self).__init__(workload_settings, target_settings,
                                           shutdown_event)
-        if workload_settings.index_type is None:
-            self.new_queries = ViewQueryGen(workload_settings.ddocs,
-                                        workload_settings.qparams)
-        else:
-            self.new_queries = ViewQueryGenByType(workload_settings.index_type,
-                                                  workload_settings.qparams)
 
     @with_sleep
     def do_batch(self):
@@ -316,6 +310,20 @@ class QueryWorker(Worker):
             logger.info('Interrupted: query-worker-{}'.format(self.sid))
         else:
             logger.info('Finished: query-worker-{}'.format(self.sid))
+
+
+class ViewWorker(QueryWorker):
+
+    def __init__(self, workload_settings, target_settings, shutdown_event):
+        super(ViewWorker, self).__init__(workload_settings, target_settings,
+                                         shutdown_event)
+
+        if workload_settings.index_type is None:
+            self.new_queries = ViewQueryGen(workload_settings.ddocs,
+                                        workload_settings.qparams)
+        else:
+            self.new_queries = ViewQueryGenByType(workload_settings.index_type,
+                                                  workload_settings.qparams)
 
 
 class OldN1QLWorker(QueryWorker):
@@ -439,7 +447,7 @@ class WorkloadGen(object):
         curr_queries = Value('L', 0)
         lock = Lock()
 
-        worker_type = QueryWorkerFactory(self.ws)
+        worker_type = ViewWorkerFactory(self.ws)
         self.query_workers = list()
         for sid in range(self.ws.query_workers):
             worker = worker_type(self.ws, self.ts, self.shutdown_event)
