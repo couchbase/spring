@@ -209,7 +209,7 @@ class ViewQueryGenByType(object):
         return self.DDOC_NAME, view_name, Query(**params)
 
 
-class NewN1QLQuery(ViewQueryGenByType):
+class OldN1QLQuery(ViewQueryGenByType):
 
     QUERIES = {
         'name_and_street_by_city': '''

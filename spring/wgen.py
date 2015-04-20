@@ -11,7 +11,7 @@ from twisted.internet import reactor
 from spring.cbgen import CBGen, CBAsyncGen, N1QLGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
                            NewKey, NewDocument, NewNestedDocument)
-from spring.querygen import ViewQueryGen, ViewQueryGenByType, NewN1QLQuery
+from spring.querygen import ViewQueryGen, ViewQueryGenByType, OldN1QLQuery
 
 
 @decorator
@@ -263,7 +263,7 @@ class QueryWorkerFactory(object):
 
     def __new__(self, workload_settings):
         if workload_settings.n1ql:
-            return N1QLWorker
+            return OldN1QLWorker
         else:
             return QueryWorker
 
@@ -318,13 +318,12 @@ class QueryWorker(Worker):
             logger.info('Finished: query-worker-{}'.format(self.sid))
 
 
-class N1QLWorker(QueryWorker):
+class OldN1QLWorker(QueryWorker):
 
     def __init__(self, workload_settings, target_settings, shutdown_event):
         super(QueryWorker, self).__init__(workload_settings, target_settings,
                                           shutdown_event)
-        self.new_queries = NewN1QLQuery(workload_settings.index_type)
-        self.new_queries = NewN1QLQuery(workload_settings.index_type)
+        self.new_queries = OldN1QLQuery(workload_settings.index_type)
 
         host, port = self.ts.node.split(':')
         params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
