@@ -361,3 +361,14 @@ class OldN1QLQuery(ViewQueryGenByType):
         view_name = self.view_sequence.next()
         query = self.QUERIES[view_name].format(**doc)
         return None, None, query
+
+class N1QLQueryGen(object):
+
+    def __init__(self, queries):
+        self.queries = cycle(queries)
+
+    def generate_query(self):
+        return
+
+    def next(self, doc):
+        return None, None, self.queries.next().format(**doc)
