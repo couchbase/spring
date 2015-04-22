@@ -146,11 +146,11 @@ class N1QLGen(CBGen):
         self.bucket = kwargs['username']
         self.password = kwargs['password']
 
-        _, self.query_nodes = self._get_list_of_servers()
-        self.nodes_url = 'http://{}:{}/pools/default'.format(
+        self.query_url = 'http://{}:{}/pools/default'.format(
             kwargs['host'],
             kwargs.get('port', 8091),
         )
+        _, self.query_nodes = self._get_list_of_servers()
 
     def start_updater(self):
         self.t = Thread(target=self._get_list_of_servers_loop)
@@ -167,7 +167,7 @@ class N1QLGen(CBGen):
         new_nodes = []
         shouldSleep = True
         try:
-            nodes = self.session.get(self.nodes_url).json()
+            nodes = self.session.get(self.query_url).json()
             for node in nodes['nodes']:
                 if 'n1ql' in node['services']:
                     new_nodes.append(node['hostname'])
@@ -181,7 +181,7 @@ class N1QLGen(CBGen):
         creds = '[{{"user":"local:{}","pass":"{}"}}]'.format(self.bucket,
                                                              self.password)
         query = {'statement': query, 'creds': creds }
-        node = choice(self.server_nodes).replace('8091', '8093')
+        node = choice(self.query_nodes).replace('8091', '8093')
         url = 'http://{}/query'.format(node)
         t0 = time()
         resp = self.query_session.post(url=url, data=query)
