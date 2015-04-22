@@ -8,10 +8,11 @@ from couchbase.exceptions import ValueFormatError
 from logger import logger
 from twisted.internet import reactor
 
-from spring.cbgen import CBGen, CBAsyncGen, N1QLGen
+from spring.cbgen import CBGen, CBAsyncGen, OldN1QLGen, N1QLGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
                            NewKey, NewDocument, NewNestedDocument)
-from spring.querygen import NewQuery, NewQueryNG, NewN1QLQuery
+from spring.querygen import (ViewQueryGen, ViewQueryGenByType, OldN1QLQuery,
+                             N1QLQueryGen)
 
 
 @decorator
@@ -259,13 +260,13 @@ class WorkerFactory(object):
             return KVWorker
 
 
-class QueryWorkerFactory(object):
+class ViewWorkerFactory(object):
 
     def __new__(self, workload_settings):
         if workload_settings.n1ql:
-            return N1QLWorker
+            return OldN1QLWorker
         else:
-            return QueryWorker
+            return ViewWorker
 
 
 class QueryWorker(Worker):
@@ -273,12 +274,6 @@ class QueryWorker(Worker):
     def __init__(self, workload_settings, target_settings, shutdown_event):
         super(QueryWorker, self).__init__(workload_settings, target_settings,
                                           shutdown_event)
-        if workload_settings.index_type is None:
-            self.new_queries = NewQuery(workload_settings.ddocs,
-                                        workload_settings.qparams)
-        else:
-            self.new_queries = NewQueryNG(workload_settings.index_type,
-                                          workload_settings.qparams)
 
     @with_sleep
     def do_batch(self):
@@ -290,15 +285,17 @@ class QueryWorker(Worker):
         for _ in xrange(self.BATCH_SIZE):
             key = self.existing_keys.next(curr_items_spot, deleted_spot)
             doc = self.docs.next(key)
+            doc['key'] = key
+            doc['bucket'] = self.ts.bucket
             ddoc_name, view_name, query = self.new_queries.next(doc)
             self.cb.query(ddoc_name, view_name, query=query)
 
     def run(self, sid, lock, curr_queries, curr_items, deleted_items):
         self.cb.start_updater()
 
-        if self.ws.query_throughput < float('inf'):
-            self.target_time = float(self.BATCH_SIZE) * self.ws.query_workers / \
-                self.ws.query_throughput
+        if self.throughput < float('inf'):
+            self.target_time = float(self.BATCH_SIZE) * self.total_workers / \
+                self.throughput
         else:
             self.target_time = None
         self.sid = sid
@@ -306,16 +303,55 @@ class QueryWorker(Worker):
         self.deleted_items = deleted_items
 
         try:
-            logger.info('Started: query-worker-{}'.format(self.sid))
+            logger.info('Started: {}-{}'.format(self.name, self.sid))
             while curr_queries.value < self.ws.ops and not self.time_to_stop():
                 with lock:
                     curr_queries.value += self.BATCH_SIZE
                 self.do_batch()
                 self.report_progress(curr_queries.value)
-        except (KeyboardInterrupt, ValueFormatError, AttributeError):
-            logger.info('Interrupted: query-worker-{}'.format(self.sid))
+        except (KeyboardInterrupt, ValueFormatError, AttributeError) as e:
+            logger.info('Interrupted: {}-{}-{}'.format(self.name, self.sid, e))
         else:
-            logger.info('Finished: query-worker-{}'.format(self.sid))
+            logger.info('Finished: {}-{}'.format(self.name, self.sid))
+
+
+class ViewWorker(QueryWorker):
+
+    def __init__(self, workload_settings, target_settings, shutdown_event):
+        super(ViewWorker, self).__init__(workload_settings, target_settings,
+                                         shutdown_event)
+        self.total_workers = self.ws.query_workers
+        self.throughput = self.ws.query_throughput
+        self.name = 'query-worker'
+
+        if workload_settings.index_type is None:
+            self.new_queries = ViewQueryGen(workload_settings.ddocs,
+                                        workload_settings.qparams)
+        else:
+            self.new_queries = ViewQueryGenByType(workload_settings.index_type,
+                                                  workload_settings.qparams)
+
+
+class OldN1QLWorker(QueryWorker):
+
+    def __init__(self, workload_settings, target_settings, shutdown_event):
+        super(QueryWorker, self).__init__(workload_settings, target_settings,
+                                          shutdown_event)
+        self.new_queries = OldN1QLQuery(workload_settings.index_type)
+        self.total_workers = self.ws.n1ql_workers
+        self.throughput = self.ws.n1ql_throughput
+        self.name = 'n1ql-worker'
+
+        host, port = self.ts.node.split(':')
+        params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
+                  'username': self.ts.bucket, 'password': self.ts.password}
+        self.cb = OldN1QLGen(**params)
+
+
+class N1QLWorkerFactory(object):
+
+    def __new__(self, workload_settings):
+        return N1QLWorker
 
 
 class N1QLWorker(QueryWorker):
@@ -323,8 +359,10 @@ class N1QLWorker(QueryWorker):
     def __init__(self, workload_settings, target_settings, shutdown_event):
         super(QueryWorker, self).__init__(workload_settings, target_settings,
                                           shutdown_event)
-        self.new_queries = NewN1QLQuery(workload_settings.index_type)
-        self.new_queries = NewN1QLQuery(workload_settings.index_type)
+        self.new_queries = N1QLQueryGen(workload_settings.n1ql_queries)
+        self.total_workers = self.ws.n1ql_workers
+        self.throughput = self.ws.n1ql_throughput
+        self.name = 'n1ql-worker'
 
         host, port = self.ts.node.split(':')
         params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
@@ -440,7 +478,7 @@ class WorkloadGen(object):
         curr_queries = Value('L', 0)
         lock = Lock()
 
-        worker_type = QueryWorkerFactory(self.ws)
+        worker_type = ViewWorkerFactory(self.ws)
         self.query_workers = list()
         for sid in range(self.ws.query_workers):
             worker = worker_type(self.ws, self.ts, self.shutdown_event)
@@ -450,6 +488,23 @@ class WorkloadGen(object):
             )
             worker_process.start()
             self.query_workers.append(worker_process)
+
+
+    def start_n1ql_workers(self, curr_items, deleted_items):
+        curr_queries = Value('L', 0)
+        lock = Lock()
+
+        worker_type = N1QLWorkerFactory(self.ws)
+        self.n1ql_workers = list()
+        for sid in range(self.ws.n1ql_workers):
+            worker = worker_type(self.ws, self.ts, self.shutdown_event)
+            worker_process = Process(
+                target=worker.run,
+                args=(sid, lock, curr_queries, curr_items, deleted_items)
+            )
+            worker_process.start()
+            self.n1ql_workers.append(worker_process)
+
 
     def start_dcp_workers(self):
         curr_queries = Value('L', 0)
@@ -479,6 +534,7 @@ class WorkloadGen(object):
         logger.info('Start all workers')
         self.start_kv_workers(curr_items, deleted_items)
         self.start_query_workers(curr_items, deleted_items)
+        self.start_n1ql_workers(curr_items, deleted_items)
         self.start_dcp_workers()
 
         if self.timer:
@@ -486,5 +542,6 @@ class WorkloadGen(object):
             self.shutdown_event.set()
         self.wait_for_workers(self.kv_workers)
         self.wait_for_workers(self.query_workers)
+        self.wait_for_workers(self.n1ql_workers)
         self.wait_for_workers(self.dcp_workers)
 

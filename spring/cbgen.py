@@ -120,7 +120,7 @@ class CBGen(CBAsyncGen):
         return tuple(self.client.query(ddoc, view, query=query))
 
 
-class N1QLGen(CBGen):
+class OldN1QLGen(CBGen):
 
     def __init__(self, **kwargs):
         self.client = Connection(**kwargs)
@@ -133,5 +133,57 @@ class N1QLGen(CBGen):
         url = 'http://{}/query'.format(node)
         t0 = time()
         resp = self.session.post(url=url, data=query)
+        latency = time() - t0
+        return resp.text, latency
+
+
+class N1QLGen(CBGen):
+
+    def __init__(self, **kwargs):
+        super(N1QLGen, self).__init__(**kwargs)
+        self.query_session = requests.Session()
+        self.query_session.headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
+        self.bucket = kwargs['username']
+        self.password = kwargs['password']
+
+        _, self.query_nodes = self._get_list_of_servers()
+        self.nodes_url = 'http://{}:{}/pools/default'.format(
+            kwargs['host'],
+            kwargs.get('port', 8091),
+        )
+
+    def start_updater(self):
+        self.t = Thread(target=self._get_list_of_servers_loop)
+        self.t.daemon = True
+        self.t.start()
+
+    def _get_list_of_servers_loop(self):
+        while True:
+            shouldSleep, self.query_nodes = self._get_list_of_servers()
+            if shouldSleep:
+                sleep(self.NODES_UPDATE_INTERVAL)
+
+    def _get_list_of_servers(self):
+        new_nodes = []
+        shouldSleep = True
+        try:
+            nodes = self.session.get(self.nodes_url).json()
+            for node in nodes['nodes']:
+                if 'n1ql' in node['services']:
+                    new_nodes.append(node['hostname'])
+        except Exception as e:
+            logger.warn('Failed to get list of servers: {}'.format(e))
+            shouldSleep = False
+
+        return shouldSleep, new_nodes
+
+    def query(self, ddoc_name, view_name, query):
+        creds = '[{{"user":"local:{}","pass":"{}"}}]'.format(self.bucket,
+                                                             self.password)
+        query = {'statement': query, 'creds': creds }
+        node = choice(self.server_nodes).replace('8091', '8093')
+        url = 'http://{}/query'.format(node)
+        t0 = time()
+        resp = self.query_session.post(url=url, data=query)
         latency = time() - t0
         return resp.text, latency
