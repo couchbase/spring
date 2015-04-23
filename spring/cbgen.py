@@ -130,7 +130,7 @@ class OldN1QLGen(CBGen):
     def query(self, ddoc_name, view_name, query):
         query = query.format(bucket=self.client.bucket)
         node = choice(self.server_nodes).replace('8091', '8093')
-        url = 'http://{}/query'.format(node)
+        url = 'http://{}/query/service'.format(node)
         t0 = time()
         resp = self.session.post(url=url, data=query)
         latency = time() - t0
@@ -182,7 +182,7 @@ class N1QLGen(CBGen):
                                                              self.password)
         query = {'statement': query, 'creds': creds }
         node = choice(self.query_nodes).replace('8091', '8093')
-        url = 'http://{}/query'.format(node)
+        url = 'http://{}/query/service'.format(node)
         t0 = time()
         resp = self.query_session.post(url=url, data=query)
         latency = time() - t0
