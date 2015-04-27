@@ -30,6 +30,7 @@ class WorkloadSettings(object):
         self.ddocs = {}
         self.qparams = {}
         self.n1ql = False
+        self.n1ql_workers = 0
 
         self.async = options.async
 
