@@ -25,6 +25,7 @@ workload_settings = type(
                          'expiration': 0,
                          'working_set': 100,
                          'working_set_access': 100,
+                         'doc_gen': 'new',
 
                          'workers': 0,
                          'query_workers': 0,
