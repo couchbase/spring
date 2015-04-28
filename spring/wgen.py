@@ -8,11 +8,10 @@ from couchbase.exceptions import ValueFormatError
 from logger import logger
 from twisted.internet import reactor
 
-from spring.cbgen import CBGen, CBAsyncGen, OldN1QLGen, N1QLGen
+from spring.cbgen import CBGen, CBAsyncGen, N1QLGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
                            NewKey, NewDocument, NewNestedDocument)
-from spring.querygen import (ViewQueryGen, ViewQueryGenByType, OldN1QLQuery,
-                             N1QLQueryGen)
+from spring.querygen import ViewQueryGen, ViewQueryGenByType, N1QLQueryGen
 
 
 @decorator
@@ -263,10 +262,7 @@ class WorkerFactory(object):
 class ViewWorkerFactory(object):
 
     def __new__(self, workload_settings):
-        if workload_settings.n1ql:
-            return OldN1QLWorker
-        else:
-            return ViewWorker
+        return ViewWorker
 
 
 class QueryWorker(Worker):
@@ -330,22 +326,6 @@ class ViewWorker(QueryWorker):
         else:
             self.new_queries = ViewQueryGenByType(workload_settings.index_type,
                                                   workload_settings.qparams)
-
-
-class OldN1QLWorker(QueryWorker):
-
-    def __init__(self, workload_settings, target_settings, shutdown_event):
-        super(QueryWorker, self).__init__(workload_settings, target_settings,
-                                          shutdown_event)
-        self.new_queries = OldN1QLQuery(workload_settings.index_type)
-        self.total_workers = self.ws.n1ql_workers
-        self.throughput = self.ws.n1ql_throughput
-        self.name = 'n1ql-worker'
-
-        host, port = self.ts.node.split(':')
-        params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
-                  'username': self.ts.bucket, 'password': self.ts.password}
-        self.cb = OldN1QLGen(**params)
 
 
 class N1QLWorkerFactory(object):
