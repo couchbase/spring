@@ -4,7 +4,7 @@ import cProfile
 import pstats
 import StringIO
 from multiprocessing import Value, Lock
-from spring.wgen import AsyncKVWorker, N1QLWorker
+from spring.wgen import AsyncKVWorker, N1QLWorker, WorkloadGen
 
 
 workload_settings = type(
@@ -49,17 +49,13 @@ target_settings = type(
 
 
 def run():
-    curr_queries = Value('L', 0)
     curr_items = Value('i', workload_settings.items)
     deleted_items = Value('i', 0)
     lock = Lock()
 
-    worker = N1QLWorker(workload_settings, target_settings, None)
-    worker.run(sid=0,
-               lock=lock,
-               curr_queries=curr_queries,
-               curr_items=curr_items,
-               deleted_items=deleted_items)
+    workload = WorkloadGen(workload_settings, target_settings)
+    workload.start_n1ql_workers(curr_items, deleted_items)
+    workload.run()
 
 def profile():
     pr = cProfile.Profile()
