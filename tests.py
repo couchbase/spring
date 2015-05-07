@@ -40,7 +40,7 @@ class NestedDocTest(unittest.TestCase):
             for i in range(10000)
         )
         mean = np.mean(sizes)
-        self.assertAlmostEqual(mean, 1024, delta=128)
+        self.assertAlmostEqual(mean, 1152, delta=128)
         p95 = np.percentile(sizes, 97)
         self.assertLess(p95, 2048)
         p99 = np.percentile(sizes, 98)
@@ -67,6 +67,8 @@ class NestedDocTest(unittest.TestCase):
             'gmtime': (1972, 3, 3, 0, 0, 0, 4, 63, 0),
             'year': 1989,
             'body': '',
+            'capped_small': '100_0',
+            'capped_large': '3000_0',
         }
         self.assertEqual(actual, expected)
 
