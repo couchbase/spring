@@ -269,20 +269,21 @@ class WorkerFactory(object):
 
     def __new__(self, workload_settings):
         if getattr(workload_settings, 'async', False):
-            return AsyncKVWorker
-        if getattr(workload_settings, 'seq_updates', False):
-            return SeqUpdatesWorker
-        if getattr(workload_settings, 'seq_reads', False):
-            return SeqReadsWorker
-        if not (getattr(workload_settings, 'seq_updates', False) or
-                getattr(workload_settings, 'seq_reads', False)):
-            return KVWorker
+            worker = AsyncKVWorker
+        elif getattr(workload_settings, 'seq_updates', False):
+            worker = SeqUpdatesWorker
+        elif getattr(workload_settings, 'seq_reads', False):
+            worker = SeqReadsWorker
+        elif not (getattr(workload_settings, 'seq_updates', False) or
+                  getattr(workload_settings, 'seq_reads', False)):
+            worker = KVWorker
+        return worker, workload_settings.workers
 
 
 class ViewWorkerFactory(object):
 
     def __new__(self, workload_settings):
-        return ViewWorker
+        return ViewWorker, workload_settings.query_workers
 
 
 class QueryWorker(Worker):
@@ -351,7 +352,7 @@ class ViewWorker(QueryWorker):
 class N1QLWorkerFactory(object):
 
     def __new__(self, workload_settings):
-        return N1QLWorker
+        return N1QLWorker, workload_settings.n1ql_workers
 
 
 class N1QLWorker(QueryWorker):
@@ -374,7 +375,7 @@ class N1QLWorker(QueryWorker):
 class DcpWorkerFactory(object):
 
     def __new__(self, workload_settings):
-        return DcpWorker
+        return DcpWorker, workload_settings.dcp_workers
 
 
 class DcpHandler(ResponseHandler):
@@ -459,88 +460,46 @@ class WorkloadGen(object):
         self.ts = target_settings
         self.timer = timer
         self.shutdown_event = timer and Event() or None
+        self.workers = {}
 
-    def start_kv_workers(self, curr_items, deleted_items):
+    def start_workers(self, worker_factory,
+                      curr_items=None, deleted_items=None):
         curr_ops = Value('L', 0)
         lock = Lock()
 
-        worker_type = WorkerFactory(self.ws)
-        self.kv_workers = list()
-        for sid in range(self.ws.workers):
+        worker_type, total_workers = worker_factory(self.ws)
+        name = worker_type.__class__.__name__
+        self.workers[name] = list()
+        for sid in range(total_workers):
+            if curr_items is None and deleted_items is None:
+                args = (sid, lock)
+            else:
+                args = (sid, lock, curr_ops, curr_items, deleted_items)
             worker = worker_type(self.ws, self.ts, self.shutdown_event)
-            worker_process = Process(
-                target=worker.run,
-                args=(sid, lock, curr_ops, curr_items, deleted_items)
-            )
+            worker_process = Process(target=worker.run, args=tuple(args))
             worker_process.start()
-            self.kv_workers.append(worker_process)
+            self.workers[name].append(worker_process)
             if getattr(self.ws, 'async', False):
                 time.sleep(2)
 
-    def start_query_workers(self, curr_items, deleted_items):
-        curr_queries = Value('L', 0)
-        lock = Lock()
-
-        worker_type = ViewWorkerFactory(self.ws)
-        self.query_workers = list()
-        for sid in range(self.ws.query_workers):
-            worker = worker_type(self.ws, self.ts, self.shutdown_event)
-            worker_process = Process(
-                target=worker.run,
-                args=(sid, lock, curr_queries, curr_items, deleted_items)
-            )
-            worker_process.start()
-            self.query_workers.append(worker_process)
-
-    def start_n1ql_workers(self, curr_items, deleted_items):
-        curr_queries = Value('L', 0)
-        lock = Lock()
-
-        worker_type = N1QLWorkerFactory(self.ws)
-        self.n1ql_workers = list()
-        for sid in range(self.ws.n1ql_workers):
-            worker = worker_type(self.ws, self.ts, self.shutdown_event)
-            worker_process = Process(
-                target=worker.run,
-                args=(sid, lock, curr_queries, curr_items, deleted_items)
-            )
-            worker_process.start()
-            self.n1ql_workers.append(worker_process)
-
-    def start_dcp_workers(self):
-        lock = Lock()
-
-        worker_type = DcpWorkerFactory(self.ws)
-        self.dcp_workers = list()
-        for sid in range(self.ws.dcp_workers):
-            worker = worker_type(self.ws, self.ts, self.shutdown_event)
-            worker_process = Process(
-                target=worker.run,
-                args=(sid, lock)
-            )
-            worker_process.start()
-            self.dcp_workers.append(worker_process)
-
-    def wait_for_workers(self, workers):
-        for worker in workers:
-            worker.join()
-            if worker.exitcode:
-                logger.interrupt('Worker finished with non-zero exit code')
+    def wait_for_all_workers(self):
+        for workers in self.workers.values():
+            for worker in workers:
+                worker.join()
+                if worker.exitcode:
+                    logger.interrupt('Worker finished with non-zero exit code')
 
     def run(self):
         curr_items = Value('L', self.ws.items)
         deleted_items = Value('L', 0)
 
         logger.info('Start all workers')
-        self.start_kv_workers(curr_items, deleted_items)
-        self.start_query_workers(curr_items, deleted_items)
-        self.start_n1ql_workers(curr_items, deleted_items)
-        self.start_dcp_workers()
+        self.start_workers(WorkerFactory, curr_items, deleted_items)
+        self.start_workers(ViewWorkerFactory, curr_items, deleted_items)
+        self.start_workers(N1QLWorkerFactory, curr_items, deleted_items)
+        self.start_workers(DcpWorkerFactory)
 
         if self.timer:
             time.sleep(self.timer)
             self.shutdown_event.set()
-        self.wait_for_workers(self.kv_workers)
-        self.wait_for_workers(self.query_workers)
-        self.wait_for_workers(self.n1ql_workers)
-        self.wait_for_workers(self.dcp_workers)
+        self.wait_for_all_workers()
