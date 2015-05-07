@@ -196,6 +196,10 @@ class NewNestedDocument(NewDocument):
 
     OVERHEAD = 450  # Minimum size due to fixed fields, body size is variable
 
+    def __init__(self, avg_size):
+        super(NewNestedDocument, self).__init__(avg_size)
+        self.capped_field_value = {}
+
     def _size(self):
         if self.avg_size <= self.OVERHEAD:
             return 0
@@ -206,6 +210,15 @@ class NewNestedDocument(NewDocument):
         else:
             # Beta distribution, 2KB-2MB range
             return 2048 / np.random.beta(a=2.2, b=1.0)
+
+    def _capped_field(self, key, num_unique):
+        # Assumes the last 12 characters are digits and monotonically increasing
+        try:
+            index = (int(key[-12:]) + 1) / num_unique
+            return '{}_{}'.format(num_unique, index)
+        except Exception, e:
+            return 'Invalid Key for capped field'
+
 
     def next(self, key):
         alphabet = self._build_alphabet(key)
@@ -226,4 +239,6 @@ class NewNestedDocument(NewDocument):
             'gmtime': self._build_gmtime(alphabet),
             'year': self._build_year(alphabet),
             'body': self._build_body(alphabet, size),
+            'capped_small': self._capped_field(key, 100),
+            'capped_large': self._capped_field(key, 3000),
         }
