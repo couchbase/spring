@@ -347,7 +347,9 @@ class N1QLWorker(QueryWorker):
         host, port = self.ts.node.split(':')
         params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
                   'username': self.ts.bucket, 'password': self.ts.password}
-        self.cb = N1QLGen(**params)
+
+        stale = getattr(workload_settings, 'n1ql_stale', 'ok')
+        self.cb = N1QLGen(stale, **params)
 
 
 class DcpWorkerFactory(object):
