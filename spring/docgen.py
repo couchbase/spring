@@ -100,8 +100,9 @@ class NewDocument(Iterator):
     SIZE_VARIATION = 0.25  # 25%
     KEY_LENGTH = 10
 
-    def __init__(self, avg_size):
+    def __init__(self, avg_size, extra_fields=False):
         self.avg_size = avg_size
+        self.extra_fields = extra_fields
 
     @classmethod
     def _get_variation_coeff(cls):
@@ -177,19 +178,41 @@ class NewDocument(Iterator):
         body = num_slices * alphabet
         return body[:length_int]
 
+    @staticmethod
+    def _build_extras(alphabet, length):
+        return alphabet[0:length];
+
     def next(self, key):
         next_length = self._get_variation_coeff() * self.avg_size
         alphabet = self._build_alphabet(key)
-        return {
-            'name': self._build_name(alphabet),
-            'email': self._build_email(alphabet),
-            'city': self._build_city(alphabet),
-            'realm': self._build_realm(alphabet),
-            'coins': self._build_coins(alphabet),
-            'category': self._build_category(alphabet),
-            'achievements': self._build_achievements(alphabet),
-            'body': self._build_body(alphabet, next_length)
-        }
+
+        if not self.extra_fields:
+            return {
+                'name': self._build_name(alphabet),
+                'email': self._build_email(alphabet),
+                'city': self._build_city(alphabet),
+                'realm': self._build_realm(alphabet),
+                'coins': self._build_coins(alphabet),
+                'category': self._build_category(alphabet),
+                'achievements': self._build_achievements(alphabet),
+                'body': self._build_body(alphabet, next_length)
+            }
+        else:
+            return {
+                'name': self._build_name(alphabet),
+                'email': self._build_email(alphabet),
+                'city': self._build_city(alphabet),
+                'realm': self._build_realm(alphabet),
+                'coins': self._build_coins(alphabet),
+                'category': self._build_category(alphabet),
+                'achievements': self._build_achievements(alphabet),
+                'body': self._build_body(alphabet, next_length),
+                'extras1': self._build_extras(alphabet, 50),
+                'extras2': self._build_extras(alphabet, 60),
+                'extras3': self._build_extras(alphabet, 70),
+                'extras4': self._build_extras(alphabet, 80),
+                'extras5': self._build_extras(alphabet, 90)
+            }
 
 
 class NewNestedDocument(NewDocument):
