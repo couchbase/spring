@@ -177,6 +177,10 @@ class NewDocument(Iterator):
         body = num_slices * alphabet
         return body[:length_int]
 
+    @staticmethod
+    def _build_extras(alphabet, length):
+        return alphabet[0:length];
+
     def next(self, key):
         next_length = self._get_variation_coeff() * self.avg_size
         alphabet = self._build_alphabet(key)
@@ -188,7 +192,12 @@ class NewDocument(Iterator):
             'coins': self._build_coins(alphabet),
             'category': self._build_category(alphabet),
             'achievements': self._build_achievements(alphabet),
-            'body': self._build_body(alphabet, next_length)
+            'body': self._build_body(alphabet, next_length),
+            'extras1': self._build_extras(alphabet, 50),
+            'extras2': self._build_extras(alphabet, 60),
+            'extras3': self._build_extras(alphabet, 70),
+            'extras4': self._build_extras(alphabet, 80),
+            'extras5': self._build_extras(alphabet, 90)
         }
 
 
