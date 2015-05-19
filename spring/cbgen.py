@@ -164,7 +164,11 @@ class N1QLGen(CBGen):
     def query(self, ddoc_name, view_name, query):
         creds = '[{{"user":"local:{}","pass":"{}"}}]'.format(self.bucket,
                                                              self.password)
-        query = {'statement': query, 'creds': creds, 'stale': self.stale}
+        query = {'statement': query,
+                 'creds': creds,
+                 'stale': self.stale,
+                 'max_parallelism': 1
+                }
         node = choice(self.query_nodes).replace('8091', '8093')
         url = 'http://{}/query/service'.format(node)
         t0 = time()
