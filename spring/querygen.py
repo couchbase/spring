@@ -22,6 +22,8 @@ class ViewQueryGen(object):
         'achievements_by_category_and_coins': 6,
         'name_and_email_by_realm_and_coins': 5,
         'experts_coins_by_name': 9,
+        'by_email': 1,
+        'by_capped_small': 1,
     }
 
     def __init__(self, ddocs, params):
@@ -74,6 +76,12 @@ class ViewQueryGen(object):
             'experts_id_by_realm_and_coins': {
                 'startkey': [realm, coins],
                 'endkey': [realm, 10000],
+            },
+            'by_email': {
+                'key': email,
+            },
+            'by_capped_small': {
+                'key': capped_small,
             },
         }
 
@@ -129,6 +137,12 @@ class ViewQueryGenByType(object):
             'distinct_full_states',
             'distinct_years',
         ),
+        'by_email': (
+            'by_email',
+        ),
+        'by_capped_small': (
+            'by_capped_small',
+        ),
     }
 
     def __init__(self, index_type, params):
@@ -138,7 +152,8 @@ class ViewQueryGenByType(object):
 
     @staticmethod
     def generate_params(city, county, country, realm, state, full_state, coins,
-                        category, year, achievements, gmtime, **kwargs):
+                        category, year, achievements, gmtime, email,
+                        capped_small, **kwargs):
         return {
             'name_and_street_by_city': {
                 'key': city['f']['f'],
@@ -199,6 +214,12 @@ class ViewQueryGenByType(object):
             },
             'body_by_country': {
                 'key': country['f'],
+            },
+            'by_email': {
+                'key': email['f']['f'],
+            },
+            'by_capped_small': {
+                'key': capped_small,
             },
         }
 
