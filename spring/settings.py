@@ -18,7 +18,8 @@ class WorkloadSettings(object):
         self.doc_gen = options.generator
         self.size = options.size
         self.items = options.items
-        self.expiration = options.expiration
+        self.expiration_pcnt = options.expiration_pcnt
+        self.expiration_ttl = options.expiration_ttl
         self.working_set = options.working_set
         self.working_set_access = options.working_set_access
 

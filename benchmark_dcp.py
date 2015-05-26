@@ -23,7 +23,7 @@ workload_settings = type(
                          
                          'size': 2048,
                          'items': 10000,
-                         'expiration': 0,
+                         'expiration_pnct': 0,
                          'working_set': 100,
                          'working_set_access': 100,
                          
