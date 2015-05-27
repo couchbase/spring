@@ -8,11 +8,12 @@ from couchbase.exceptions import ValueFormatError
 from logger import logger
 from twisted.internet import reactor
 
-from spring.cbgen import CBGen, CBAsyncGen, N1QLGen
+from spring.cbgen import CBGen, CBAsyncGen, N1QLGen, SpatialGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
                            NewKey, NewDocument, NewNestedDocument,
                            NewDocumentFromSpatialFile)
-from spring.querygen import ViewQueryGen, ViewQueryGenByType, N1QLQueryGen
+from spring.querygen import (ViewQueryGen, ViewQueryGenByType, N1QLQueryGen,
+                             SpatialQueryFromFile)
 
 
 @decorator
@@ -286,6 +287,12 @@ class ViewWorkerFactory(object):
         return ViewWorker, workload_settings.query_workers
 
 
+class SpatialWorkerFactory(object):
+
+    def __new__(self, workload_settings):
+        return SpatialWorker, workload_settings.spatial.workers
+
+
 class QueryWorker(Worker):
 
     def __init__(self, workload_settings, target_settings, shutdown_event):
@@ -318,6 +325,7 @@ class QueryWorker(Worker):
         self.sid = sid
         self.curr_items = curr_items
         self.deleted_items = deleted_items
+        self.curr_queries = curr_queries
 
         try:
             logger.info('Started: {}-{}'.format(self.name, self.sid))
@@ -347,6 +355,34 @@ class ViewWorker(QueryWorker):
         else:
             self.new_queries = ViewQueryGenByType(workload_settings.index_type,
                                                   workload_settings.qparams)
+
+
+class SpatialWorker(QueryWorker):
+
+    def __init__(self, workload_settings, target_settings, shutdown_event):
+        super(QueryWorker, self).__init__(workload_settings, target_settings,
+                                          shutdown_event)
+        self.total_workers = self.ws.spatial.workers
+        self.throughput = self.ws.spatial.throughput
+        self.name = 'spatial-worker'
+
+        self.new_queries = SpatialQueryFromFile(
+            workload_settings.spatial.queries,
+            workload_settings.spatial.dimensionality,
+            workload_settings.spatial.view_names,
+            workload_settings.spatial.params)
+
+        host, port = self.ts.node.split(':')
+        params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
+                  'username': self.ts.bucket, 'password': self.ts.password}
+        self.cb = SpatialGen(**params)
+
+    @with_sleep
+    def do_batch(self):
+        for i in xrange(self.BATCH_SIZE):
+            offset = self.curr_queries.value - self.BATCH_SIZE + i
+            ddoc_name, view_name, query = self.new_queries.next(offset)
+            self.cb.query(ddoc_name, view_name, query=query)
 
 
 class N1QLWorkerFactory(object):
@@ -498,6 +534,7 @@ class WorkloadGen(object):
         self.start_workers(ViewWorkerFactory, curr_items, deleted_items)
         self.start_workers(N1QLWorkerFactory, curr_items, deleted_items)
         self.start_workers(DcpWorkerFactory)
+        self.start_workers(SpatialWorkerFactory, curr_items, deleted_items)
 
         if self.timer:
             time.sleep(self.timer)
