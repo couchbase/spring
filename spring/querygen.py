@@ -218,4 +218,8 @@ class N1QLQueryGen(object):
         return
 
     def next(self, doc):
-        return None, None, self.queries.next().format(**doc)
+        query = self.queries.next()
+        if 'statement' in query:
+            query['statement'] = query['statement'].format(**doc)
+
+        return None, None, query

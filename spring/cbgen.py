@@ -122,14 +122,13 @@ class CBGen(CBAsyncGen):
 
 class N1QLGen(CBGen):
 
-    def __init__(self, scan_consistency, **kwargs):
+    def __init__(self, **kwargs):
         super(N1QLGen, self).__init__(**kwargs)
         self.query_session = requests.Session()
         self.query_session.headers.update(
             {'Content-Type': 'application/x-www-form-urlencoded'})
         self.bucket = kwargs['username']
         self.password = kwargs['password']
-        self.scan_consistency = scan_consistency
 
         self.query_url = 'http://{}:{}/pools/default'.format(
             kwargs['host'],
@@ -165,11 +164,8 @@ class N1QLGen(CBGen):
     def query(self, ddoc_name, view_name, query):
         creds = '[{{"user":"local:{}","pass":"{}"}}]'.format(self.bucket,
                                                              self.password)
-        query = {
-            'statement': query,
-            'creds': creds,
-            'scan_consistency': self.scan_consistency,
-            'max_parallelism': 1}
+
+        query['creds'] = creds
         node = choice(self.query_nodes).replace('8091', '8093')
         url = 'http://{}/query/service'.format(node)
         t0 = time()

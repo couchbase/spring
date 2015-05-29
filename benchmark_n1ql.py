@@ -34,7 +34,10 @@ workload_settings = type(
         'n1ql': None,
         'n1ql_workers': 1,
         'n1ql_throughput': 10,
-        'n1ql_queries': ['SELECT * FROM `{bucket}` USE KEYS(\"{key}\")']
+        'n1ql_queries': [{
+            'statement': 'SELECT * FROM `{bucket}` USE KEYS(\"{key}\")',
+            'max-parallel': 1
+            }]
         }
     )()
 

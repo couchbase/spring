@@ -368,9 +368,7 @@ class N1QLWorker(QueryWorker):
         params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
                   'username': self.ts.bucket, 'password': self.ts.password}
 
-        scan_consistency = getattr(workload_settings, 'n1ql_scan_consistency',
-                                   'not_bounded')
-        self.cb = N1QLGen(scan_consistency, **params)
+        self.cb = N1QLGen(**params)
 
 
 class DcpWorkerFactory(object):
