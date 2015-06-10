@@ -125,6 +125,7 @@ class N1QLGen(CBGen):
     def __init__(self, scan_consistency, **kwargs):
         super(N1QLGen, self).__init__(**kwargs)
         self.query_session = requests.Session()
+        self.query_session.keep_alive = True
         self.query_session.headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
         self.bucket = kwargs['username']
         self.password = kwargs['password']
