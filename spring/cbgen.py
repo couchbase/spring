@@ -171,4 +171,4 @@ class N1QLGen(CBGen):
         t0 = time()
         resp = self.query_session.post(url=url, data=query)
         latency = time() - t0
-        return resp.text, latency
+        return None, latency
