@@ -58,7 +58,6 @@ def run():
     deleted_items = Value('i', 0)
 
     workload = WorkloadGen(workload_settings, target_settings)
-    workload.start_n1ql_workers(curr_items, deleted_items)
     workload.run()
 
 
