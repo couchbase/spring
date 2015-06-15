@@ -501,13 +501,12 @@ class WorkloadGen(object):
         self.shutdown_event = timer and Event() or None
         self.workers = {}
 
-    def start_workers(self, worker_factory,
+    def start_workers(self, worker_factory, name,
                       curr_items=None, deleted_items=None):
         curr_ops = Value('L', 0)
         lock = Lock()
 
         worker_type, total_workers = worker_factory(self.ws)
-        name = worker_type.__class__.__name__
         self.workers[name] = list()
         for sid in range(total_workers):
             if curr_items is None and deleted_items is None:
@@ -533,11 +532,12 @@ class WorkloadGen(object):
         deleted_items = Value('L', 0)
 
         logger.info('Start all workers')
-        self.start_workers(WorkerFactory, curr_items, deleted_items)
-        self.start_workers(ViewWorkerFactory, curr_items, deleted_items)
-        self.start_workers(N1QLWorkerFactory, curr_items, deleted_items)
-        self.start_workers(DcpWorkerFactory)
-        self.start_workers(SpatialWorkerFactory, curr_items, deleted_items)
+        self.start_workers(WorkerFactory, 'kv', curr_items, deleted_items)
+        self.start_workers(ViewWorkerFactory, 'view', curr_items, deleted_items)
+        self.start_workers(N1QLWorkerFactory, 'n1ql', curr_items, deleted_items)
+        self.start_workers(DcpWorkerFactory, 'dcp')
+        self.start_workers(SpatialWorkerFactory, 'spatial', curr_items,
+                           deleted_items)
 
         if self.timer:
             time.sleep(self.timer)
