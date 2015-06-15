@@ -290,7 +290,10 @@ class ViewWorkerFactory(object):
 class SpatialWorkerFactory(object):
 
     def __new__(self, workload_settings):
-        return SpatialWorker, workload_settings.spatial.workers
+        workers = 0
+        if hasattr(workload_settings, 'spatial'):
+            workers = getattr(workload_settings.spatial, 'workers', 0)
+        return SpatialWorker, workers
 
 
 class QueryWorker(Worker):
