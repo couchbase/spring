@@ -118,7 +118,7 @@ class KVWorker(Worker):
 
         # If a file is used as input for the data, make sure the workers
         # read from the correct file offset
-        if self.ws.spatial and self.ws.spatial.data:
+        if hasattr(self.ws, 'spatial') and hasattr(self.ws.spatial, 'data'):
             self.docs.offset = curr_items_tmp
 
         cmds = []
