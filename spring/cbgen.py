@@ -150,19 +150,10 @@ class N1QLGen(CBGen):
         _, self.query_nodes = self._get_list_of_servers()
 
     def start_updater(self):
-        self.t = Thread(target=self._get_list_of_servers_loop)
-        self.t.daemon = True
-        self.t.start()
+        pass
 
-    def _get_list_of_servers_loop(self):
-        while True:
-            shouldSleep, self.query_nodes = self._get_list_of_servers()
-            if shouldSleep:
-                sleep(self.NODES_UPDATE_INTERVAL)
-
-    def _get_list_of_servers(self):
+    def _get_query_connections(self):
         new_nodes = []
-        shouldSleep = True
         try:
             nodes = self.session.get(self.query_url).json()
             for node in nodes['nodes']:
@@ -170,9 +161,9 @@ class N1QLGen(CBGen):
                     new_nodes.append(node['hostname'])
         except Exception as e:
             logger.warn('Failed to get list of servers: {}'.format(e))
-            shouldSleep = False
+            raise
 
-        return shouldSleep, new_nodes
+        return new_nodes
 
     def query(self, ddoc_name, view_name, query):
         creds = '[{{"user":"local:{}","pass":"{}"}}]'.format(self.bucket,
