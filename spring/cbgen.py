@@ -1,3 +1,5 @@
+import urllib3
+
 from random import choice
 from threading import Thread
 from time import time, sleep
@@ -137,9 +139,6 @@ class N1QLGen(CBGen):
 
     def __init__(self, **kwargs):
         super(N1QLGen, self).__init__(**kwargs)
-        self.query_session = requests.Session()
-        self.query_session.headers.update(
-            {'Content-Type': 'application/x-www-form-urlencoded'})
         self.bucket = kwargs['username']
         self.password = kwargs['password']
 
@@ -147,32 +146,34 @@ class N1QLGen(CBGen):
             kwargs['host'],
             kwargs.get('port', 8091),
         )
-        _, self.query_nodes = self._get_list_of_servers()
+        self.query_conns = self._get_query_connections()
 
     def start_updater(self):
         pass
 
     def _get_query_connections(self):
-        new_nodes = []
+        conns = []
         try:
             nodes = self.session.get(self.query_url).json()
             for node in nodes['nodes']:
                 if 'n1ql' in node['services']:
-                    new_nodes.append(node['hostname'])
+                    url = node['hostname'].replace('8091', '8093')
+                    conns.append(urllib3.connection_from_url(url))
         except Exception as e:
             logger.warn('Failed to get list of servers: {}'.format(e))
             raise
 
-        return new_nodes
+        return conns
 
     def query(self, ddoc_name, view_name, query):
         creds = '[{{"user":"local:{}","pass":"{}"}}]'.format(self.bucket,
                                                              self.password)
 
         query['creds'] = creds
-        node = choice(self.query_nodes).replace('8091', '8093')
-        url = 'http://{}/query/service'.format(node)
+        node = choice(self.query_conns)
+
         t0 = time()
-        resp = self.query_session.post(url=url, data=query)
+        response = node.request('POST', '/query/service', fields=query,
+                                encode_multipart=False)
         latency = time() - t0
         return None, latency
