@@ -175,5 +175,6 @@ class N1QLGen(CBGen):
         t0 = time()
         response = node.request('POST', '/query/service', fields=query,
                                 encode_multipart=False)
+        response.read(cache_content=False)
         latency = time() - t0
         return None, latency
