@@ -126,6 +126,12 @@ class NewDocument(Iterator):
         return '%s@%s.com' % (alphabet[12:18], alphabet[18:24])
 
     @staticmethod
+    def _build_alt_email(alphabet):
+        name = random.randint(1,9)
+        domain = random.randint(12,18)
+        return '%s@%s.com' % (alphabet[name:name+6], alphabet[domain:domain+6])
+
+    @staticmethod
     def _build_city(alphabet):
         return alphabet[24:30]
 
@@ -195,6 +201,7 @@ class NewDocument(Iterator):
             return {
                 'name': self._build_name(alphabet),
                 'email': self._build_email(alphabet),
+                'alt_email': self._build_alt_email(alphabet),
                 'city': self._build_city(alphabet),
                 'realm': self._build_realm(alphabet),
                 'coins': self._build_coins(alphabet),
@@ -206,6 +213,7 @@ class NewDocument(Iterator):
             return {
                 'name': self._build_name(alphabet),
                 'email': self._build_email(alphabet),
+                'alt_email': self._build_alt_email(alphabet),
                 'city': self._build_city(alphabet),
                 'realm': self._build_realm(alphabet),
                 'coins': self._build_coins(alphabet),
@@ -254,6 +262,7 @@ class NewNestedDocument(NewDocument):
         return {
             'name': {'f': {'f': {'f': self._build_name(alphabet)}}},
             'email': {'f': {'f': self._build_email(alphabet)}},
+            'alt_email': {'f': {'f': self._build_alt_email(alphabet)}},
             'street': {'f': {'f': self._build_street(alphabet)}},
             'city': {'f': {'f': self._build_city(alphabet)}},
             'county': {'f': {'f': self._build_county(alphabet)}},
