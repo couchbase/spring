@@ -314,3 +314,49 @@ class NewDocumentFromSpatialFile(object):
         for i in range(self.dim):
             doc[chr(ASCII_A_OFFSET + i)] = [mbb[i * 2], mbb[i * 2 + 1]]
         return doc
+
+
+class ReverseLookupDocument(Iterator):
+
+    def __init__(self, avg_size, partitions, isRandom=False):
+        self.avg_size = avg_size
+        self.partitions = partitions
+        self.isRandom = isRandom
+
+    def _build_alphabet(self, key):
+        return md5(key).hexdigest() + md5(key[::-1]).hexdigest()
+
+    def _build_name(self, alphabet):
+        return '%s %s' % (alphabet[:6], alphabet[6:12])
+
+    def _build_email(self, alphabet):
+        if self.isRandom:
+            name = random.randint(1,9)
+            domain = random.randint(12,18)
+            return '%s@%s.com' % (alphabet[name:name+6], alphabet[domain:domain+6])
+
+        return '%s@%s.com' % (alphabet[12:18], alphabet[18:24])
+
+    def _build_city(self, alphabet):
+        return alphabet[24:30]
+
+    def _build_partition(self, alphabet, id):
+        return id % self.partitions
+
+    def _build_body(self, alphabet, length):
+        length_int = int(length)
+        num_slices = int(math.ceil(length / 64))  # 64 == len(alphabet)
+        body = num_slices * alphabet
+        return body[:length_int]
+
+    def next(self, key):
+        id = int(key[-12:]) + 1
+        alphabet = self._build_alphabet(key)
+
+        return {
+            'name': self._build_name(alphabet),
+            'email': self._build_email(alphabet),
+            'city': self._build_city(alphabet),
+            'bio': self._build_body(alphabet, self.avg_size - 80),
+            'partition_id': self._build_partition(alphabet, id)
+        }

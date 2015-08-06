@@ -274,6 +274,9 @@ class N1QLQueryGen(object):
         if 'statement' in query:
             query['statement'] = query['statement'].format(**doc)
 
+        if 'prepared' in query:
+            query['prepared'] = query['prepared'].format(**doc)
+
         if 'args' in query:
             query['args'] = query['args'].format(**doc)
 

@@ -11,7 +11,7 @@ from twisted.internet import reactor
 from spring.cbgen import CBGen, CBAsyncGen, N1QLGen, SpatialGen
 from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
                            NewKey, NewDocument, NewNestedDocument,
-                           NewDocumentFromSpatialFile)
+                           ReverseLookupDocument, NewDocumentFromSpatialFile)
 from spring.querygen import (ViewQueryGen, ViewQueryGenByType, N1QLQueryGen,
                              SpatialQueryFromFile)
 
@@ -56,6 +56,9 @@ class Worker(object):
             self.docs = NewDocument(self.ws.size, extra_fields)
         elif self.ws.doc_gen == 'new':
             self.docs = NewNestedDocument(self.ws.size)
+        elif self.ws.doc_gen == 'reverse_lookup':
+            self.docs = ReverseLookupDocument(self.ws.size,
+                                              self.ws.doc_partitions)
         elif self.ws.doc_gen == 'spatial':
             self.docs = NewDocumentFromSpatialFile(
                 self.ws.spatial.data,
