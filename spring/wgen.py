@@ -57,8 +57,12 @@ class Worker(object):
         elif self.ws.doc_gen == 'new':
             self.docs = NewNestedDocument(self.ws.size)
         elif self.ws.doc_gen == 'reverse_lookup':
+            isRandom = True
+            if self.ts.prefix == 'n1ql':
+                isRandom = False
             self.docs = ReverseLookupDocument(self.ws.size,
-                                              self.ws.doc_partitions)
+                                              self.ws.doc_partitions,
+                                              isRandom)
         elif self.ws.doc_gen == 'spatial':
             self.docs = NewDocumentFromSpatialFile(
                 self.ws.spatial.data,
@@ -410,6 +414,15 @@ class N1QLWorker(QueryWorker):
         host, port = self.ts.node.split(':')
         params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
                   'username': self.ts.bucket, 'password': self.ts.password}
+
+        self.existing_keys = ExistingKey(self.ws.working_set,
+                                         self.ws.working_set_access,
+                                         'n1ql')
+
+        if self.ws.doc_gen == 'reverse_lookup':
+            self.docs = ReverseLookupDocument(self.ws.size,
+                                              self.ws.doc_partitions,
+                                              False)
 
         self.cb = N1QLGen(**params)
 

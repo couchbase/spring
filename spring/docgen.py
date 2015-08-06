@@ -318,7 +318,7 @@ class NewDocumentFromSpatialFile(object):
 
 class ReverseLookupDocument(Iterator):
 
-    def __init__(self, avg_size, partitions, isRandom=False):
+    def __init__(self, avg_size, partitions, isRandom=True):
         self.avg_size = avg_size
         self.partitions = partitions
         self.isRandom = isRandom
