@@ -2,6 +2,7 @@ import array
 from itertools import cycle
 import json
 import os
+import copy
 
 from numpy import random
 from couchbase.views.params import Query
@@ -269,7 +270,7 @@ class N1QLQueryGen(object):
         return
 
     def next(self, doc):
-        query = self.queries.next()
+        query = copy.deepcopy(self.queries.next())
         if 'statement' in query:
             query['statement'] = query['statement'].format(**doc)
 
