@@ -316,18 +316,12 @@ class NewDocumentFromSpatialFile(object):
         return doc
 
 
-class ReverseLookupDocument(Iterator):
+class ReverseLookupDocument(NewNestedDocument):
 
     def __init__(self, avg_size, partitions, isRandom=True):
-        self.avg_size = avg_size
+        super(ReverseLookupDocument, self).__init__(avg_size)
         self.partitions = partitions
         self.isRandom = isRandom
-
-    def _build_alphabet(self, key):
-        return md5(key).hexdigest() + md5(key[::-1]).hexdigest()
-
-    def _build_name(self, alphabet):
-        return '%s %s' % (alphabet[:6], alphabet[6:12])
 
     def _build_email(self, alphabet):
         if self.isRandom:
@@ -336,9 +330,6 @@ class ReverseLookupDocument(Iterator):
             return '%s@%s.com' % (alphabet[name:name+6], alphabet[domain:domain+6])
 
         return '%s@%s.com' % (alphabet[12:18], alphabet[18:24])
-
-    def _build_city(self, alphabet):
-        return alphabet[24:30]
 
     def _build_partition(self, alphabet, id):
         return id % self.partitions
@@ -353,21 +344,28 @@ class ReverseLookupDocument(Iterator):
         except Exception:
             return 'Invalid Key for capped field'
 
-    def _build_body(self, alphabet, length):
-        length_int = int(length)
-        num_slices = int(math.ceil(length / 64))  # 64 == len(alphabet)
-        body = num_slices * alphabet
-        return body[:length_int]
-
     def next(self, key):
         id = int(key[-12:]) + 1
         alphabet = self._build_alphabet(key)
+        size = self._size()
 
         return {
             'name': self._build_name(alphabet),
             'email': self._build_email(alphabet),
+            'alt_email': self._build_alt_email(alphabet),
+            'street': self._build_street(alphabet),
             'city': self._build_city(alphabet),
-            'bio': self._build_body(alphabet, self.avg_size - 80),
-            'partition_id': self._build_partition(alphabet, id),
-            'capped_small': self._capped_field(id, 100)
+            'county': self._build_county(alphabet),
+            'state': self._build_state(alphabet),
+            'full_state': self._build_full_state(alphabet),
+            'country': self._build_country(alphabet),
+            'realm': self._build_realm(alphabet),
+            'coins': self._build_coins(alphabet),
+            'category': self._build_category(alphabet),
+            'achievements': self._build_achievements(alphabet),
+            'gmtime': self._build_gmtime(alphabet),
+            'year': self._build_year(alphabet),
+            'body': self._build_body(alphabet, size),
+            'capped_small': self._capped_field(id, 100),
+            'partition_id': self._build_partition(alphabet, id)
         }
