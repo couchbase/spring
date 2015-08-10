@@ -343,6 +343,16 @@ class ReverseLookupDocument(Iterator):
     def _build_partition(self, alphabet, id):
         return id % self.partitions
 
+    def _capped_field(self, id, num_unique):
+        # Assumes the last 12 characters are digits and
+        # monotonically increasing
+        try:
+            parts = self.partitions
+            index = (id % parts) + parts * (id / (parts * num_unique))
+            return '{}_{}'.format(num_unique, index)
+        except Exception:
+            return 'Invalid Key for capped field'
+
     def _build_body(self, alphabet, length):
         length_int = int(length)
         num_slices = int(math.ceil(length / 64))  # 64 == len(alphabet)
@@ -358,5 +368,6 @@ class ReverseLookupDocument(Iterator):
             'email': self._build_email(alphabet),
             'city': self._build_city(alphabet),
             'bio': self._build_body(alphabet, self.avg_size - 80),
-            'partition_id': self._build_partition(alphabet, id)
+            'partition_id': self._build_partition(alphabet, id),
+            'capped_small': self._capped_field(id, 100)
         }
