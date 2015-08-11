@@ -334,7 +334,11 @@ class ReverseLookupDocument(NewNestedDocument):
     def _build_partition(self, alphabet, id):
         return id % self.partitions
 
-    def _capped_field(self, prefix, id, num_unique):
+    def _capped_field(self, alphabet, prefix, id, num_unique):
+        if self.isRandom:
+            seed = random.randint(1,9)
+            return '%s' % (alphabet[seed:seed+6])
+
         # Assumes the last 12 characters are digits and
         # monotonically increasing
         try:
@@ -367,6 +371,6 @@ class ReverseLookupDocument(NewNestedDocument):
             'gmtime': self._build_gmtime(alphabet),
             'year': self._build_year(alphabet),
             'body': self._build_body(alphabet, size),
-            'capped_small': self._capped_field(prefix, id, 100),
+            'capped_small': self._capped_field(alphabet, prefix, id, 100),
             'partition_id': self._build_partition(alphabet, id)
         }
