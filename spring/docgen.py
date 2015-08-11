@@ -334,18 +334,19 @@ class ReverseLookupDocument(NewNestedDocument):
     def _build_partition(self, alphabet, id):
         return id % self.partitions
 
-    def _capped_field(self, id, num_unique):
+    def _capped_field(self, prefix, id, num_unique):
         # Assumes the last 12 characters are digits and
         # monotonically increasing
         try:
             parts = self.partitions
             index = (id % parts) + parts * (id / (parts * num_unique))
-            return '{}_{}'.format(num_unique, index)
+            return '{}_{}_{}'.format(prefix, num_unique, index)
         except Exception:
             return 'Invalid Key for capped field'
 
     def next(self, key):
         id = int(key[-12:]) + 1
+        prefix = key[:-12]
         alphabet = self._build_alphabet(key)
         size = self._size()
 
@@ -366,6 +367,6 @@ class ReverseLookupDocument(NewNestedDocument):
             'gmtime': self._build_gmtime(alphabet),
             'year': self._build_year(alphabet),
             'body': self._build_body(alphabet, size),
-            'capped_small': self._capped_field(id, 100),
+            'capped_small': self._capped_field(prefix, id, 100),
             'partition_id': self._build_partition(alphabet, id)
         }
