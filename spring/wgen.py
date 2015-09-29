@@ -547,18 +547,13 @@ class WorkloadGen(object):
         curr_items = Value('L', self.ws.items)
         deleted_items = Value('L', 0)
 
-        logger.info('Start kv workers')
+        logger.info('Start all workers')
         self.start_workers(WorkerFactory, 'kv', curr_items, deleted_items)
-
-        if self.ws._section == 'access':
-            logger.info('Start query workers')
-            self.start_workers(ViewWorkerFactory, 'view', curr_items,
-                               deleted_items)
-            self.start_workers(N1QLWorkerFactory, 'n1ql', curr_items,
-                               deleted_items)
-            self.start_workers(DcpWorkerFactory, 'dcp')
-            self.start_workers(SpatialWorkerFactory, 'spatial', curr_items,
-                               deleted_items)
+        self.start_workers(ViewWorkerFactory, 'view', curr_items, deleted_items)
+        self.start_workers(N1QLWorkerFactory, 'n1ql', curr_items, deleted_items)
+        self.start_workers(DcpWorkerFactory, 'dcp')
+        self.start_workers(SpatialWorkerFactory, 'spatial', curr_items,
+                           deleted_items)
 
         if self.timer:
             time.sleep(self.timer)
