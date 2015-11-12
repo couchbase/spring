@@ -9,9 +9,9 @@ from logger import logger
 from twisted.internet import reactor
 
 from spring.cbgen import CBGen, CBAsyncGen, N1QLGen, SpatialGen
-from spring.docgen import (ExistingKey, KeyForRemoval, SequentialHotKey,
-                           NewKey, NewDocument, NewNestedDocument,
-                           ReverseLookupDocument, NewDocumentFromSpatialFile)
+from spring.docgen import (ExistingKey, KeyForRemoval, KeyForCASUpdate, 
+                           SequentialHotKey, NewKey, NewDocument, NewNestedDocument,
+                           MergeDocument, ReverseLookupDocument, NewDocumentFromSpatialFile)
 from spring.querygen import (ViewQueryGen, ViewQueryGenByType, N1QLQueryGen,
                              SpatialQueryFromFile)
 
@@ -56,6 +56,13 @@ class Worker(object):
             self.docs = NewDocument(self.ws.size, extra_fields)
         elif self.ws.doc_gen == 'new':
             self.docs = NewNestedDocument(self.ws.size)
+        elif self.ws.doc_gen == 'merge':
+            isRandom = True
+            if self.ts.prefix == 'n1ql':
+                isRandom = False
+            self.docs = MergeDocument(self.ws.size,
+                                              self.ws.doc_partitions,
+                                              isRandom)
         elif self.ws.doc_gen == 'reverse_lookup':
             isRandom = True
             if self.ts.prefix == 'n1ql':
@@ -401,10 +408,10 @@ class N1QLWorkerFactory(object):
         return N1QLWorker, workload_settings.n1ql_workers
 
 
-class N1QLWorker(QueryWorker):
+class N1QLWorker(Worker):
 
     def __init__(self, workload_settings, target_settings, shutdown_event):
-        super(QueryWorker, self).__init__(workload_settings, target_settings,
+        super(N1QLWorker, self).__init__(workload_settings, target_settings,
                                           shutdown_event)
         self.new_queries = N1QLQueryGen(workload_settings.n1ql_queries)
         self.total_workers = self.ws.n1ql_workers
@@ -418,14 +425,158 @@ class N1QLWorker(QueryWorker):
         self.existing_keys = ExistingKey(self.ws.working_set,
                                          self.ws.working_set_access,
                                          'n1ql')
+        self.new_keys = NewKey('n1ql', self.ws.expiration)
+        self.keys_for_removal = KeyForRemoval('n1ql')
+        self.keys_for_casupdate = KeyForCASUpdate(self.total_workers, self.ws.working_set,
+                                                  self.ws.working_set_access,
+                                                  'n1ql')
 
-        if self.ws.doc_gen == 'reverse_lookup':
+        if self.ws.doc_gen == 'merge':
+            self.docs = MergeDocument(self.ws.size,
+                                              self.ws.doc_partitions,
+                                              False)
+        elif self.ws.doc_gen == 'reverse_lookup':
             self.docs = ReverseLookupDocument(self.ws.size,
                                               self.ws.doc_partitions,
                                               False)
 
         self.cb = N1QLGen(**params)
 
+    @with_sleep
+    def do_batch(self):
+        curr_items_tmp = curr_items_spot = self.curr_items.value
+        if self.ws.n1ql_op == 'create':
+            with self.lock:
+                self.curr_items.value += self.BATCH_SIZE
+                curr_items_tmp = self.curr_items.value - self.BATCH_SIZE
+            curr_items_spot = (curr_items_tmp -
+                               self.BATCH_SIZE * self.total_workers)
+
+        deleted_items_tmp = deleted_spot = 0
+        if self.ws.n1ql_op == 'delete':
+            with self.lock:
+                self.deleted_items.value += self.BATCH_SIZE
+                deleted_items_tmp = self.deleted_items.value - self.BATCH_SIZE
+            deleted_spot = (deleted_items_tmp +
+                            self.BATCH_SIZE * self.total_workers)
+
+        deleted_capped_items_tmp = deleted_capped_spot = 0
+        if self.ws.n1ql_op == 'rangedelete':
+            with self.lock:
+                self.deleted_capped_items.value += self.BATCH_SIZE
+                deleted_capped_items_tmp = self.deleted_capped_items.value - self.BATCH_SIZE
+            deleted_capped_spot = (deleted_capped_items_tmp +
+                            self.BATCH_SIZE * self.total_workers)
+        
+        casupdated_items_tmp = casupdated_spot = 0
+        if self.ws.n1ql_op == 'update':
+            with self.lock:
+                self.casupdated_items.value += self.BATCH_SIZE
+                casupdated_items_tmp = self.casupdated_items.value - self.BATCH_SIZE
+            casupdated_spot = (casupdated_items_tmp +
+                            self.BATCH_SIZE * self.total_workers)
+        
+        if self.ws.n1ql_op == 'read':
+            curr_items_spot = \
+                self.curr_items.value - self.ws.creates * self.ws.workers
+            deleted_spot = \
+                self.deleted_items.value + self.ws.deletes * self.ws.workers
+        
+        if self.ws.n1ql_op == 'create':
+            for _ in xrange(self.BATCH_SIZE):
+                curr_items_tmp += 1
+                key, ttl = self.new_keys.next(curr_items_tmp)
+                doc = self.docs.next(key)
+                doc['key'] = key
+                doc['bucket'] = self.ts.bucket
+                ddoc_name, view_name, query = self.new_queries.next(doc)
+                self.cb.query(ddoc_name, view_name, query=query)
+
+        elif self.ws.n1ql_op == 'delete':
+            for _ in xrange(self.BATCH_SIZE):
+                deleted_items_tmp += 1
+                key = self.keys_for_removal.next(deleted_items_tmp)
+                doc = self.docs.next(key)
+                doc['key'] = key
+                doc['bucket'] = self.ts.bucket
+                ddoc_name, view_name, query = self.new_queries.next(doc)
+                self.cb.query(ddoc_name, view_name, query=query)
+        
+        elif self.ws.n1ql_op == 'update' or self.ws.n1ql_op == 'lookupupdate':
+            for _ in xrange(self.BATCH_SIZE):
+                key = self.keys_for_casupdate.next(self.sid, curr_items_spot, deleted_spot)
+                doc = self.docs.next(key)
+                doc['key'] = key
+                doc['bucket'] = self.ts.bucket
+                ddoc_name, view_name, query = self.new_queries.next(doc)
+                self.cb.query(ddoc_name, view_name, query=query)
+        
+        elif self.ws.n1ql_op == 'rangeupdate':
+            for _ in xrange(self.BATCH_SIZE):
+                key = self.keys_for_casupdate.next(self.sid, curr_items_spot, deleted_spot)
+                doc = self.docs.next(key)
+                doc['key'] = key
+                doc['bucket'] = self.ts.bucket
+                ddoc_name, view_name, query = self.new_queries.next(doc)
+                self.cb.query(ddoc_name, view_name, query=query)
+
+        elif self.ws.n1ql_op == 'rangedelete':
+            for _ in xrange(self.BATCH_SIZE):
+                doc = {}
+                doc['capped_small'] = "n1ql-_100_" + str(deleted_capped_items_tmp)
+                ddoc_name, view_name, query = self.new_queries.next(doc)
+                self.cb.query(ddoc_name, view_name, query=query)
+                deleted_capped_items_tmp += 1
+        
+        elif self.ws.n1ql_op == 'merge':           #run select * workload for merge
+            for _ in xrange(self.BATCH_SIZE):
+                key = self.existing_keys.next(curr_items_spot, deleted_spot)
+                doc = self.docs.next(key)
+                doc['key'] = key
+                doc['bucket'] = self.ts.bucket
+                ddoc_name, view_name, query = self.new_queries.next(doc)
+                query['statement'] = "SELECT * FROM `bucket-1` USE KEYS[$1];"
+                query['args'] = "[\"{key}\"]".format(**doc)
+                del query['prepared']
+                self.cb.query(ddoc_name, view_name, query=query)
+
+        elif self.ws.n1ql_op == 'read':
+            for _ in xrange(self.BATCH_SIZE):
+                key = self.existing_keys.next(curr_items_spot, deleted_spot)
+                doc = self.docs.next(key)
+                doc['key'] = key
+                doc['bucket'] = self.ts.bucket
+                ddoc_name, view_name, query = self.new_queries.next(doc)
+                self.cb.query(ddoc_name, view_name, query=query)
+
+    def run(self, sid, lock, curr_queries, curr_items, deleted_items,
+                              casupdated_items, deleted_capped_items):
+        self.cb.start_updater()
+
+        if self.throughput < float('inf'):
+            self.target_time = float(self.BATCH_SIZE) * self.total_workers / \
+                self.throughput
+        else:
+            self.target_time = None
+        self.lock = lock
+        self.sid = sid
+        self.curr_items = curr_items
+        self.deleted_items = deleted_items
+        self.deleted_capped_items = deleted_capped_items
+        self.casupdated_items = casupdated_items
+        self.curr_queries = curr_queries
+
+        try:
+            logger.info('Started: {}-{}'.format(self.name, self.sid))
+            while curr_queries.value < self.ws.ops and not self.time_to_stop():
+                with self.lock:
+                    curr_queries.value += self.BATCH_SIZE
+                self.do_batch()
+                self.report_progress(curr_queries.value)
+        except (KeyboardInterrupt, ValueFormatError, AttributeError) as e:
+            logger.info('Interrupted: {}-{}-{}'.format(self.name, self.sid, e))
+        else:
+            logger.info('Finished: {}-{}'.format(self.name, self.sid))
 
 class DcpWorkerFactory(object):
 
@@ -517,8 +668,9 @@ class WorkloadGen(object):
         self.shutdown_event = timer and Event() or None
         self.workers = {}
 
-    def start_workers(self, worker_factory, name,
-                      curr_items=None, deleted_items=None):
+    def start_workers(self, worker_factory, name, curr_items=None, 
+                      deleted_items=None, casupdated_items=None, 
+                      deleted_capped_items = None):
         curr_ops = Value('L', 0)
         lock = Lock()
 
@@ -527,6 +679,9 @@ class WorkloadGen(object):
         for sid in range(total_workers):
             if curr_items is None and deleted_items is None:
                 args = (sid, lock)
+            elif casupdated_items is not None or deleted_capped_items is not None:
+                args = (sid, lock, curr_ops, curr_items, deleted_items,
+                                casupdated_items, deleted_capped_items)
             else:
                 args = (sid, lock, curr_ops, curr_items, deleted_items)
             worker = worker_type(self.ws, self.ts, self.shutdown_event)
@@ -546,11 +701,14 @@ class WorkloadGen(object):
     def run(self):
         curr_items = Value('L', self.ws.items)
         deleted_items = Value('L', 0)
+        deleted_capped_items = Value('L', 0)
+        casupdated_items = Value('L', 0)
 
         logger.info('Start all workers')
         self.start_workers(WorkerFactory, 'kv', curr_items, deleted_items)
         self.start_workers(ViewWorkerFactory, 'view', curr_items, deleted_items)
-        self.start_workers(N1QLWorkerFactory, 'n1ql', curr_items, deleted_items)
+        self.start_workers(N1QLWorkerFactory, 'n1ql', curr_items, deleted_items,
+                           casupdated_items, deleted_capped_items)
         self.start_workers(DcpWorkerFactory, 'dcp')
         self.start_workers(SpatialWorkerFactory, 'spatial', curr_items,
                            deleted_items)

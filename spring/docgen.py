@@ -98,6 +98,32 @@ class KeyForRemoval(Iterator):
         key = '%012d' % curr_deletes
         return self.add_prefix(key)
 
+class KeyForCASUpdate(Iterator):
+
+    def __init__(self, total_workers, working_set, working_set_access, prefix):
+        self.n1ql_workers = total_workers
+        self.working_set = working_set
+        self.working_set_access = working_set_access
+        self.prefix = prefix
+
+    def next(self, sid, curr_items, curr_deletes):
+        num_existing_items = curr_items - curr_deletes
+        num_hot_items = int(num_existing_items * self.working_set / 100.0)
+        num_cold_items = num_existing_items - num_hot_items
+
+        left_limit = 1 + curr_deletes
+        if self.working_set_access == 100 or \
+                random.randint(0, 100) <= self.working_set_access:
+            left_limit += num_cold_items
+            right_limit = curr_items
+        else:
+            right_limit = left_limit + num_cold_items
+        limit_step = (right_limit - left_limit)/self.n1ql_workers
+        left_limit = left_limit +(limit_step)*sid
+        right_limit = left_limit + limit_step -1
+        key = np.random.random_integers(left_limit, right_limit)
+        key = '%012d' % key
+        return self.add_prefix(key)
 
 class NewDocument(Iterator):
 
@@ -374,3 +400,61 @@ class ReverseLookupDocument(NewNestedDocument):
             'capped_small': self._capped_field(alphabet, prefix, id, 100),
             'partition_id': self._build_partition(alphabet, id)
         }
+
+class MergeDocument(ReverseLookupDocument):
+
+    def __init__(self, avg_size, partitions, isRandom=True):
+        super(MergeDocument, self).__init__(avg_size, partitions, isRandom)
+
+    def next(self, key):
+        id = int(key[-12:]) + 1
+        prefix = key[:-12]
+        alphabet = self._build_alphabet(key)
+        size = self._size()
+
+        if(id%100000 == 0):
+
+            return {
+                'extramerge':self._build_country(alphabet),
+                'name': self._build_name(alphabet),
+                'email': self._build_email(alphabet),
+                'alt_email': self._build_alt_email(alphabet),
+                'street': self._build_street(alphabet),
+                'city': self._build_city(alphabet),
+                'county': self._build_county(alphabet),
+                'state': self._build_state(alphabet),
+                'full_state': self._build_full_state(alphabet),
+                'country': self._build_country(alphabet),
+                'realm': self._build_realm(alphabet),
+                'coins': self._build_coins(alphabet),
+                'category': self._build_category(alphabet),
+                'achievements': self._build_achievements(alphabet),
+                'gmtime': self._build_gmtime(alphabet),
+                'year': self._build_year(alphabet),
+                'body': self._build_body(alphabet, size),
+                'capped_small': self._capped_field(alphabet, prefix, id, 100),
+                'partition_id': self._build_partition(alphabet, id)
+            }
+
+        else:
+
+            return {
+                'name': self._build_name(alphabet),
+                'email': self._build_email(alphabet),
+                'alt_email': self._build_alt_email(alphabet),
+                'street': self._build_street(alphabet),
+                'city': self._build_city(alphabet),
+                'county': self._build_county(alphabet),
+                'state': self._build_state(alphabet),
+                'full_state': self._build_full_state(alphabet),
+                'country': self._build_country(alphabet),
+                'realm': self._build_realm(alphabet),
+                'coins': self._build_coins(alphabet),
+                'category': self._build_category(alphabet),
+                'achievements': self._build_achievements(alphabet),
+                'gmtime': self._build_gmtime(alphabet),
+                'year': self._build_year(alphabet),
+                'body': self._build_body(alphabet, size),
+                'capped_small': self._capped_field(alphabet, prefix, id, 100),
+                'partition_id': self._build_partition(alphabet, id)
+            }

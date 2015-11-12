@@ -278,7 +278,14 @@ class N1QLQueryGen(object):
             query['prepared'] = query['prepared'].format(**doc)
 
         if 'args' in query:
-            query['args'] = query['args'].format(**doc)
-
+            argslist = query['args'].split(',')
+            idx = 0
+            for arg in argslist:
+                if '{}' in arg:
+                    argslist[idx] = argslist[idx].format(doc)
+                else:
+                    argslist[idx] = argslist[idx].format(**doc)
+                idx += 1
+            query['args'] = ",".join(argslist)
 
         return None, None, query
