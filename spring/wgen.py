@@ -452,7 +452,6 @@ class N1QLWorker(Worker):
                 self.deleted_items.value + self.ws.deletes * self.ws.workers
             for _ in xrange(self.BATCH_SIZE):
                 key = self.existing_keys.next(curr_items_spot, deleted_spot)
-                print "key %s"%key
                 doc = self.docs.next(key)
                 doc['key'] = key
                 doc['bucket'] = self.ts.bucket
