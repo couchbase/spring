@@ -444,6 +444,22 @@ class N1QLWorker(Worker):
 
     @with_sleep
     def do_batch(self):
+
+        if self.ws.n1ql_op == 'read':
+            curr_items_spot = \
+                self.curr_items.value - self.ws.creates * self.ws.workers
+            deleted_spot = \
+                self.deleted_items.value + self.ws.deletes * self.ws.workers
+            for _ in xrange(self.BATCH_SIZE):
+                key = self.existing_keys.next(curr_items_spot, deleted_spot)
+                print "key %s"%key
+                doc = self.docs.next(key)
+                doc['key'] = key
+                doc['bucket'] = self.ts.bucket
+                ddoc_name, view_name, query = self.new_queries.next(doc)
+                self.cb.query(ddoc_name, view_name, query=query)
+            return 
+
         curr_items_tmp = curr_items_spot = self.curr_items.value
         if self.ws.n1ql_op == 'create':
             with self.lock:
@@ -475,12 +491,6 @@ class N1QLWorker(Worker):
                 casupdated_items_tmp = self.casupdated_items.value - self.BATCH_SIZE
             casupdated_spot = (casupdated_items_tmp +
                             self.BATCH_SIZE * self.total_workers)
-        
-        if self.ws.n1ql_op == 'read':
-            curr_items_spot = \
-                self.curr_items.value - self.ws.creates * self.ws.workers
-            deleted_spot = \
-                self.deleted_items.value + self.ws.deletes * self.ws.workers
         
         if self.ws.n1ql_op == 'create':
             for _ in xrange(self.BATCH_SIZE):
@@ -538,15 +548,6 @@ class N1QLWorker(Worker):
                 query['statement'] = "SELECT * FROM `bucket-1` USE KEYS[$1];"
                 query['args'] = "[\"{key}\"]".format(**doc)
                 del query['prepared']
-                self.cb.query(ddoc_name, view_name, query=query)
-
-        elif self.ws.n1ql_op == 'read':
-            for _ in xrange(self.BATCH_SIZE):
-                key = self.existing_keys.next(curr_items_spot, deleted_spot)
-                doc = self.docs.next(key)
-                doc['key'] = key
-                doc['bucket'] = self.ts.bucket
-                ddoc_name, view_name, query = self.new_queries.next(doc)
                 self.cb.query(ddoc_name, view_name, query=query)
 
     def run(self, sid, lock, curr_queries, curr_items, deleted_items,
