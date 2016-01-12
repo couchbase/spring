@@ -10,6 +10,7 @@ import numpy as np
 from spring.states import STATES, NUM_STATES
 
 from fastdocgen import build_achievements
+import json
 
 
 ASCII_A_OFFSET = 97
@@ -98,6 +99,7 @@ class KeyForRemoval(Iterator):
         key = '%012d' % curr_deletes
         return self.add_prefix(key)
 
+
 class KeyForCASUpdate(Iterator):
 
     def __init__(self, total_workers, working_set, working_set_access, prefix):
@@ -125,10 +127,11 @@ class KeyForCASUpdate(Iterator):
         key = '%012d' % key
         return self.add_prefix(key)
 
+
 class NewDocument(Iterator):
 
     SIZE_VARIATION = 0.25  # 25%
-    KEY_LENGTH = 10
+    STATIC_PART_SIZE = None
 
     def __init__(self, avg_size, extra_fields=False):
         self.avg_size = avg_size
@@ -219,10 +222,7 @@ class NewDocument(Iterator):
     def _build_extras(alphabet, length):
         return alphabet[0:length]
 
-    def next(self, key):
-        next_length = self._get_variation_coeff() * self.avg_size
-        alphabet = self._build_alphabet(key)
-
+    def _build_doc(self, alphabet, body_length, key):
         if not self.extra_fields:
             return {
                 'name': self._build_name(alphabet),
@@ -233,7 +233,7 @@ class NewDocument(Iterator):
                 'coins': self._build_coins(alphabet),
                 'category': self._build_category(alphabet),
                 'achievements': self._build_achievements(alphabet, key),
-                'body': self._build_body(alphabet, next_length)
+                'body': self._build_body(alphabet, body_length)
             }
         else:
             return {
@@ -245,13 +245,26 @@ class NewDocument(Iterator):
                 'coins': self._build_coins(alphabet),
                 'category': self._build_category(alphabet),
                 'achievements': self._build_achievements(alphabet),
-                'body': self._build_body(alphabet, next_length),
+                'body': self._build_body(alphabet, body_length),
                 'extras1': self._build_extras(alphabet, 50),
                 'extras2': self._build_extras(alphabet, 60),
                 'extras3': self._build_extras(alphabet, 70),
                 'extras4': self._build_extras(alphabet, 80),
                 'extras5': self._build_extras(alphabet, 90)
             }
+
+    def next(self, key):
+        if self.STATIC_PART_SIZE is None:
+            alphabet = self._build_alphabet(key)
+            self.STATIC_PART_SIZE = len(
+                json.dumps(self._build_doc(alphabet, 0)))
+        # numpy.random.uniform includes low, but excludes high [low, high)
+        # that's why we use '- 2' to calc size. It works for the cases
+        # when the number of docs rather large > 10^5
+        body_field_length = self._get_variation_coeff() * (
+            self.avg_size - self.STATIC_PART_SIZE - 2)
+        alphabet = self._build_alphabet(key)
+        return self._build_doc(alphabet, body_field_length)
 
 
 class NewNestedDocument(NewDocument):
