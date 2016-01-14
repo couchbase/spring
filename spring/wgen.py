@@ -1,13 +1,17 @@
+import cPickle
+import logging
+import subprocess
 import time
 from multiprocessing import Process, Value, Lock, Event
 
-from dcp import DcpClient, ResponseHandler
 from decorator import decorator
 from numpy import random
-from couchbase.exceptions import ValueFormatError
 from logger import logger
 from twisted.internet import reactor
 
+from dcp import DcpClient, ResponseHandler
+from couchbase import Couchbase
+from couchbase.exceptions import ValueFormatError
 from spring.cbgen import CBGen, CBAsyncGen, N1QLGen, SpatialGen
 from spring.docgen import (ExistingKey, KeyForRemoval, KeyForCASUpdate, 
                            SequentialHotKey, NewKey, NewDocument, NewNestedDocument,
@@ -78,9 +82,18 @@ class Worker(object):
         self.next_report = 0.05  # report after every 5% of completion
 
         host, port = self.ts.node.split(':')
-        self.init_db({'bucket': self.ts.bucket, 'host': host, 'port': port,
-                      'username': self.ts.bucket,
-                      'password': self.ts.password})
+
+        # Only FTS uses proxyPort and authless bucket right now.
+        # Instead of jumping hoops to specify proxyPort in target
+        # iterator/settings, which only passes down very specific attributes,
+        # just detect fts instead. The following does not work with
+        # authless bucket. FTS's worker does its own Couchbase.connect
+        if not (hasattr(self.ws, "fts") and hasattr(
+            self.ws.fts, "doc_database_url")):
+            # default sasl bucket
+            self.init_db({'bucket': self.ts.bucket, 'host': host, 'port': port,
+                          'username': self.ts.bucket,
+                          'password': self.ts.password})
 
     def init_db(self, params):
         try:
@@ -659,6 +672,67 @@ class DcpWorker(Worker):
                     .format(self.sid, last_item_count))
 
 
+class FtsWorkerFactory(object):
+    def __new__(self, workload_settings):
+        num_workers = 0
+        if hasattr(workload_settings, "fts"):
+            num_workers = 1
+        return FtsWorker, num_workers
+
+
+class FtsWorker(object):
+    """
+    This class downloads files filled with multiple pickle objects and load the
+    doc/dict to the KV store of Couchbase.
+    """
+    def __init__(self, workload_settings, target_settings, shutdown_event=None):
+        self.ws = workload_settings
+        self.ts = target_settings
+        self.shutdown_event = shutdown_event
+        self.log_level = logging.INFO
+
+    def _setup_logging(self, sid):
+        LOG_FILENAME = "/tmp/spring.worker.fts.proc.{}.log".format(sid)
+        self.logger = logging.getLogger('FtsWorker')
+        self.logger.setLevel(self.log_level)
+        handler = logging.handlers.RotatingFileHandler(
+                    LOG_FILENAME, maxBytes=1024000, backupCount=5)
+        handler.setLevel(self.log_level)
+        fmt = logging.Formatter(
+                "%(asctime)s - %(levelname)s - %(funcName)s - line %(lineno)s" +
+                " %(message)s")
+        handler.formatter = fmt
+        self.logger.addHandler(handler)
+        self.propagate = False
+
+    def run(self, sid, lock):
+        self._setup_logging(sid)
+
+        self.logger.info("Started FtsWorker")
+
+        db_url = self.ws.fts.doc_database_url
+        self.logger.info("Loading database url %s", db_url)
+        fname = "/tmp/" + db_url.split("/")[-1]
+        self.logger.info("Downloading file to %s" % fname)
+        cmd = "wget -O {} -nc \"{}\" ".format(fname, db_url)
+        self.logger.info("Calling %s" % cmd)
+        subprocess.call(cmd, shell=True)
+        self.load_database(fname)
+
+    def load_database(self, fname):
+        host, port = self.ts.node.split(":")
+        c = Couchbase.connect(bucket=self.ts.bucket, host=host)
+        counter = 0
+        with open(fname, 'r') as f:
+            while True:
+                try:
+                    d = cPickle.load(f)
+                    c.set(str(counter), d)
+                    counter += 1
+                except EOFError:
+                    break
+
+
 class WorkloadGen(object):
 
     def __init__(self, workload_settings, target_settings, timer=None):
@@ -712,6 +786,7 @@ class WorkloadGen(object):
         self.start_workers(DcpWorkerFactory, 'dcp')
         self.start_workers(SpatialWorkerFactory, 'spatial', curr_items,
                            deleted_items)
+        self.start_workers(FtsWorkerFactory, 'fts')
 
         if self.timer:
             time.sleep(self.timer)
