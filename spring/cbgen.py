@@ -20,7 +20,7 @@ from txcouchbase.connection import Connection as TxConnection
 import requests
 from decorator import decorator
 from logger import logger
-from spring.docgen import NewDocument
+
 
 @decorator
 def quiet(method, *args, **kwargs):
@@ -133,30 +133,6 @@ class SpatialGen(CBGen):
         resp = self.session.get(url=url, params=query)
         latency = time() - t0
         return resp.text, latency
-
-
-class SubDocGen(CBGen):
-    def read(self, key, subdoc_fields):
-        for field in subdoc_fields.split(','):
-            self.client.get_in(key, field)
-
-    def update(self, key, subdoc_fields, size):
-        newdoc = NewDocument(size)
-        alphabet = newdoc._build_alphabet(key)
-        for field in subdoc_fields.split(','):
-            new_field_value = getattr(newdoc, '_build_' + field)(alphabet)
-            self.client.upsert_in(key, field, new_field_value)
-
-    def counter(self, key, subdoc_counter_fields):
-        for field in subdoc_counter_fields.split(','):
-            self.client.counter_in(key, field, delta=50)
-
-    def delete(self, key, subdoc_delete_fields):
-        for field in subdoc_delete_fields.split(','):
-            self.client.remove_in(key, field)
-
-    def multipath(self):
-        raise NotImplementedError
 
 
 class N1QLGen(CBGen):
