@@ -401,6 +401,19 @@ class ReverseLookupDocument(NewNestedDocument):
             'partition_id': self._build_partition(alphabet, id)
         }
 
+
+class ReverseLookupDocumentArrayIndexing(ReverseLookupDocument):
+    num_items_array_indexing = 0
+
+    def __init__(self, avg_size, partitions, num_items=0):
+        super(ReverseLookupDocumentArrayIndexing, self).__init__(avg_size, partitions)
+        ReverseLookupDocumentArrayIndexing.num_items_array_indexing = num_items
+
+    @staticmethod
+    def _build_achievements(alphabet):
+        return random.sample(xrange(ReverseLookupDocumentArrayIndexing.num_items_array_indexing), 10)
+
+
 class MergeDocument(ReverseLookupDocument):
 
     def __init__(self, avg_size, partitions, isRandom=True):

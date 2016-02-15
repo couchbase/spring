@@ -15,7 +15,8 @@ from couchbase.exceptions import ValueFormatError
 from spring.cbgen import CBGen, CBAsyncGen, N1QLGen, SpatialGen
 from spring.docgen import (ExistingKey, KeyForRemoval, KeyForCASUpdate, 
                            SequentialHotKey, NewKey, NewDocument, NewNestedDocument,
-                           MergeDocument, ReverseLookupDocument, NewDocumentFromSpatialFile)
+                           MergeDocument, ReverseLookupDocument, NewDocumentFromSpatialFile,
+                           ReverseLookupDocumentArrayIndexing)
 from spring.querygen import (ViewQueryGen, ViewQueryGenByType, N1QLQueryGen,
                              SpatialQueryFromFile)
 
@@ -74,6 +75,12 @@ class Worker(object):
             self.docs = ReverseLookupDocument(self.ws.size,
                                               self.ws.doc_partitions,
                                               isRandom)
+        elif self.ws.doc_gen == 'reverse_lookup_array_indexing':
+            isRandom = True
+            if self.ts.prefix == 'n1ql':
+                isRandom = False
+            self.docs = ReverseLookupDocumentArrayIndexing(
+                self.ws.size, self.ws.doc_partitions, isRandom)
         elif self.ws.doc_gen == 'spatial':
             self.docs = NewDocumentFromSpatialFile(
                 self.ws.spatial.data,
@@ -82,7 +89,6 @@ class Worker(object):
         self.next_report = 0.05  # report after every 5% of completion
 
         host, port = self.ts.node.split(':')
-
         # Only FTS uses proxyPort and authless bucket right now.
         # Instead of jumping hoops to specify proxyPort in target
         # iterator/settings, which only passes down very specific attributes,
@@ -452,6 +458,9 @@ class N1QLWorker(Worker):
             self.docs = ReverseLookupDocument(self.ws.size,
                                               self.ws.doc_partitions,
                                               False)
+        elif self.ws.doc_gen == 'reverse_lookup_array_indexing':
+            self.docs = ReverseLookupDocumentArrayIndexing(
+                self.ws.size, self.ws.doc_partitions, False)
 
         self.cb = N1QLGen(**params)
 
