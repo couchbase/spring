@@ -3,15 +3,13 @@ import math
 import time
 from hashlib import md5
 from itertools import cycle
-
 import random
+import json
+
 import numpy as np
 
 from spring.states import STATES, NUM_STATES
-
 from fastdocgen import build_achievements
-import json
-
 
 ASCII_A_OFFSET = 97
 
@@ -318,6 +316,24 @@ class NewNestedDocument(NewDocument):
             'capped_small': self._capped_field(key, 100),
             'capped_large': self._capped_field(key, 3000),
         }
+
+
+class NewLargeDocument(NewNestedDocument):
+    def next(self, key):
+        alphabet = self._build_alphabet(key)
+        nest1 = super(NewLargeDocument, self).next(key)
+        nest2 = super(NewNestedDocument, self).next(key)
+        return {'nest1': nest1,
+                'nest2': nest2,
+                'name': self._build_name(alphabet),
+                'email': self._build_email(alphabet),
+                'alt_email': self._build_alt_email(alphabet),
+                'city': self._build_city(alphabet),
+                'realm': self._build_realm(alphabet),
+                'coins': self._build_coins(alphabet),
+                'category': self._build_category(alphabet),
+                'achievements': self._build_achievements(alphabet)
+                }
 
 
 class NewDocumentFromSpatialFile(object):

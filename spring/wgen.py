@@ -1,25 +1,21 @@
-import cPickle
 import logging
-import subprocess
 import time
-import random
 from multiprocessing import Process, Value, Lock, Event
-
-from decorator import decorator
 from numpy import random
-from logger import logger
+
 from twisted.internet import reactor
 
+from decorator import decorator
+from logger import logger
 from dcp import DcpClient, ResponseHandler
-from couchbase import Couchbase
 from couchbase.n1ql import MutationState
 from couchbase.n1ql import N1QLQuery
 from couchbase.exceptions import ValueFormatError
-from spring.cbgen import CBGen, CBAsyncGen, N1QLGen, SpatialGen, FtsGen, ElasticGen
-from spring.docgen import (ExistingKey, KeyForRemoval, KeyForCASUpdate, 
+from spring.cbgen import CBGen, CBAsyncGen, N1QLGen, SpatialGen, SubDocGen, FtsGen, ElasticGen
+from spring.docgen import (ExistingKey, KeyForRemoval, KeyForCASUpdate,
                            SequentialHotKey, NewKey, NewDocument, NewNestedDocument,
                            MergeDocument, ReverseLookupDocument, NewDocumentFromSpatialFile,
-                           ReverseLookupDocumentArrayIndexing)
+                           ReverseLookupDocumentArrayIndexing, NewLargeDocument)
 from spring.querygen import (ViewQueryGen, ViewQueryGenByType, N1QLQueryGen,
                              SpatialQueryFromFile)
 
@@ -97,6 +93,8 @@ class Worker(object):
             self.docs = NewDocumentFromSpatialFile(
                 self.ws.spatial.data,
                 self.ws.spatial.dimensionality)
+        elif self.ws.doc_gen == 'large_subdoc':
+            self.docs = NewLargeDocument(self.ws.size)
 
         self.next_report = 0.05  # report after every 5% of completion
 
@@ -135,13 +133,13 @@ class Worker(object):
 
 class KVWorker(Worker):
 
-    def gen_cmd_sequence(self, cb=None):
+    def gen_cmd_sequence(self, cb=None, cases="cas"):
         ops = \
             ['c'] * self.ws.creates + \
             ['r'] * self.ws.reads + \
             ['u'] * self.ws.updates + \
             ['d'] * self.ws.deletes + \
-            ['cas'] * self.ws.cases
+            [cases] * self.ws.cases
         random.shuffle(ops)
 
         curr_items_tmp = curr_items_spot = self.curr_items.value
@@ -177,11 +175,18 @@ class KVWorker(Worker):
                 cmds.append((cb.create, (key, doc, ttl)))
             elif op == 'r':
                 key = self.existing_keys.next(curr_items_spot, deleted_spot)
-                cmds.append((cb.read, (key, )))
+                if cases == 'counter':
+                    cmds.append((cb.read, (key, self.ws.subdoc_fields)))
+                else:
+                    cmds.append((cb.read, (key, )))
             elif op == 'u':
-                key = self.existing_keys.next(curr_items_spot, deleted_spot)
-                doc = self.docs.next(key)
-                cmds.append((cb.update, (key, doc)))
+                if cases == 'counter':
+                    key = self.existing_keys.next(curr_items_spot, deleted_spot)
+                    cmds.append((cb.update, (key, self.ws.subdoc_fields, self.ws.size)))
+                else:
+                    key = self.existing_keys.next(curr_items_spot, deleted_spot)
+                    doc = self.docs.next(key)
+                    cmds.append((cb.update, (key, doc)))
             elif op == 'd':
                 deleted_items_tmp += 1
                 key = self.keys_for_removal.next(deleted_items_tmp)
@@ -190,6 +195,9 @@ class KVWorker(Worker):
                 key = self.existing_keys.next(curr_items_spot, deleted_spot)
                 doc = self.docs.next(key)
                 cmds.append((cb.cas, (key, doc)))
+            elif op == 'counter':
+                key = self.existing_keys.next(curr_items_spot, deleted_spot)
+                cmds.append((cb.cas, (key, self.ws.subdoc_counter_fields)))
         return cmds
 
     @with_sleep
@@ -210,7 +218,10 @@ class KVWorker(Worker):
 
         logger.info('Started: worker-{}'.format(self.sid))
         try:
-            while curr_ops.value < self.ws.ops and not self.time_to_stop():
+            condition = 'curr_ops.value < self.ws.ops and not self.time_to_stop()'
+            if self.ws.operations:
+                condition = 'curr_ops.value < self.ws.items'
+            while eval(condition):
                 with lock:
                     curr_ops.value += self.BATCH_SIZE
                 self.do_batch()
@@ -219,6 +230,19 @@ class KVWorker(Worker):
             logger.info('Interrupted: worker-{}'.format(self.sid))
         else:
             logger.info('Finished: worker-{}'.format(self.sid))
+
+
+class SubDocWorker(KVWorker):
+    def __init__(self, workload_settings, target_settings, shutdown_event):
+        super(SubDocWorker, self).__init__(workload_settings, target_settings,
+                                           shutdown_event)
+        host, port = self.ts.node.split(':')
+        params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
+                  'username': self.ts.bucket, 'password': self.ts.password}
+        self.cb = SubDocGen(**params)
+
+    def gen_cmd_sequence(self, cb=None):
+        return super(SubDocWorker, self).gen_cmd_sequence(cb, cases='counter')
 
 
 class AsyncKVWorker(KVWorker):
@@ -326,6 +350,11 @@ class WorkerFactory(object):
                   getattr(workload_settings, 'seq_reads', False)):
             worker = KVWorker
         return worker, workload_settings.workers
+
+
+class SubdocWorkerFactory(object):
+    def __new__(self, workload_settings):
+        return SubDocWorker, workload_settings.subdoc_workers
 
 
 class ViewWorkerFactory(object):
@@ -504,7 +533,7 @@ class N1QLWorker(Worker):
                 doc['bucket'] = self.ts.bucket
                 ddoc_name, view_name, query = self.new_queries.next(doc)
                 self.cb.query(ddoc_name, view_name, query=query)
-            return 
+            return
 
         curr_items_tmp = curr_items_spot = self.curr_items.value
         if self.ws.n1ql_op == 'create':
@@ -537,7 +566,7 @@ class N1QLWorker(Worker):
                 casupdated_items_tmp = self.casupdated_items.value - self.BATCH_SIZE
             casupdated_spot = (casupdated_items_tmp +
                             self.BATCH_SIZE * self.total_workers)
-        
+
         if self.ws.n1ql_op == 'create':
             for _ in xrange(self.BATCH_SIZE):
                 curr_items_tmp += 1
@@ -557,7 +586,7 @@ class N1QLWorker(Worker):
                 doc['bucket'] = self.ts.bucket
                 ddoc_name, view_name, query = self.new_queries.next(doc)
                 self.cb.query(ddoc_name, view_name, query=query)
-        
+
         elif self.ws.n1ql_op == 'update' or self.ws.n1ql_op == 'lookupupdate':
             for _ in xrange(self.BATCH_SIZE):
                 key = self.keys_for_casupdate.next(self.sid, curr_items_spot, deleted_spot)
@@ -606,7 +635,7 @@ class N1QLWorker(Worker):
                 ddoc_name, view_name, query = self.new_queries.next(doc)
                 self.cb.query(ddoc_name, view_name, query=query)
                 deleted_capped_items_tmp += 1
-        
+
         elif self.ws.n1ql_op == 'merge':           #run select * workload for merge
             for _ in xrange(self.BATCH_SIZE):
                 key = self.existing_keys.next(curr_items_spot, deleted_spot)
@@ -784,12 +813,11 @@ class WorkloadGen(object):
         self.shutdown_event = timer and Event() or None
         self.workers = {}
 
-    def start_workers(self, worker_factory, name, curr_items=None, 
-                      deleted_items=None, casupdated_items=None, 
+    def start_workers(self, worker_factory, name, curr_items=None,
+                      deleted_items=None, casupdated_items=None,
                       deleted_capped_items = None):
         curr_ops = Value('L', 0)
         lock = Lock()
-
         worker_type, total_workers = worker_factory(self.ws)
         self.workers[name] = list()
         for sid in range(total_workers):
@@ -819,9 +847,9 @@ class WorkloadGen(object):
         deleted_items = Value('L', 0)
         deleted_capped_items = Value('L', 0)
         casupdated_items = Value('L', 0)
-
         logger.info('Start all workers')
         self.start_workers(WorkerFactory, 'kv', curr_items, deleted_items)
+        self.start_workers(SubdocWorkerFactory, 'subdoc', curr_items, deleted_items)
         self.start_workers(ViewWorkerFactory, 'view', curr_items, deleted_items)
         self.start_workers(N1QLWorkerFactory, 'n1ql', curr_items, deleted_items,
                            casupdated_items, deleted_capped_items)

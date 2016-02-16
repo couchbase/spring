@@ -1,10 +1,11 @@
-import urllib3
-
 from random import choice, shuffle
 from threading import Thread
 from time import time, sleep
-
 from couchbase import experimental
+
+import urllib3
+import couchbase.subdocument as SD
+
 experimental.enable()
 from couchbase.exceptions import (ConnectError,
                                   CouchbaseError,
@@ -23,6 +24,7 @@ import requests
 from decorator import decorator
 from logger import logger
 from requests.auth import HTTPBasicAuth
+from spring.docgen import NewDocument
 
 
 @decorator
@@ -138,6 +140,31 @@ class SpatialGen(CBGen):
         resp = self.session.get(url=url, params=query)
         latency = time() - t0
         return resp.text, latency
+
+
+class SubDocGen(CBGen):
+
+    def read(self, key, subdoc_fields):
+        for field in subdoc_fields.split(','):
+            self.client.lookup_in(key, SD.get(field))
+
+    def update(self, key, subdoc_fields, size):
+        newdoc = NewDocument(size)
+        alphabet = newdoc._build_alphabet(key)
+        for field in subdoc_fields.split(','):
+            new_field_value = getattr(newdoc, '_build_' + field)(alphabet)
+            self.client.mutate_in(key, SD.upsert(field, new_field_value))
+
+    def counter(self, key, subdoc_counter_fields):
+        for field in subdoc_counter_fields.split(','):
+            self.client.counter_in(key, field, delta=50)
+
+    def delete(self, key, subdoc_delete_fields):
+        for field in subdoc_delete_fields.split(','):
+            self.client.remove_in(key, field)
+
+    def multipath(self):
+        raise NotImplementedError
 
 
 class N1QLGen(CBGen):
