@@ -79,8 +79,13 @@ class Worker(object):
             isRandom = True
             if self.ts.prefix == 'n1ql':
                 isRandom = False
-            self.docs = ReverseLookupDocumentArrayIndexing(
-                self.ws.size, self.ws.doc_partitions, self.ws.items)
+            if self.ws.updates:
+                # plus 10 to all values in array when updating doc
+                self.docs = ReverseLookupDocumentArrayIndexing(
+                    self.ws.size, self.ws.doc_partitions, self.ws.items, delta=10)
+            else:
+                self.docs = ReverseLookupDocumentArrayIndexing(
+                    self.ws.size, self.ws.doc_partitions, self.ws.items)
         elif self.ws.doc_gen == 'spatial':
             self.docs = NewDocumentFromSpatialFile(
                 self.ws.spatial.data,
@@ -459,9 +464,12 @@ class N1QLWorker(Worker):
                                               self.ws.doc_partitions,
                                               False)
         elif self.ws.doc_gen == 'reverse_lookup_array_indexing':
-            self.docs = ReverseLookupDocumentArrayIndexing(
-                self.ws.size, self.ws.doc_partitions, self.ws.items)
-
+            if self.ws.updates:
+                self.docs = ReverseLookupDocumentArrayIndexing(
+                    self.ws.size, self.ws.doc_partitions, self.ws.items, delta=10)
+            else:
+                 self.docs = ReverseLookupDocumentArrayIndexing(
+                    self.ws.size, self.ws.doc_partitions, self.ws.items)
         self.cb = N1QLGen(**params)
 
     @with_sleep

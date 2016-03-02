@@ -205,7 +205,7 @@ class NewDocument(Iterator):
         return int(alphabet[41], 16) % 3
 
     @staticmethod
-    def _build_achievements(alphabet):
+    def _build_achievements(alphabet, key=None):
         return build_achievements(alphabet) or [0]
 
     @staticmethod
@@ -232,7 +232,7 @@ class NewDocument(Iterator):
                 'realm': self._build_realm(alphabet),
                 'coins': self._build_coins(alphabet),
                 'category': self._build_category(alphabet),
-                'achievements': self._build_achievements(alphabet),
+                'achievements': self._build_achievements(alphabet, key),
                 'body': self._build_body(alphabet, next_length)
             }
         else:
@@ -393,7 +393,7 @@ class ReverseLookupDocument(NewNestedDocument):
             'realm': self._build_realm(alphabet),
             'coins': self._build_coins(alphabet),
             'category': self._build_category(alphabet),
-            'achievements': self._build_achievements(alphabet),
+            'achievements': self._build_achievements(alphabet, key),
             'gmtime': self._build_gmtime(alphabet),
             'year': self._build_year(alphabet),
             'body': self._build_body(alphabet, size),
@@ -403,15 +403,26 @@ class ReverseLookupDocument(NewNestedDocument):
 
 
 class ReverseLookupDocumentArrayIndexing(ReverseLookupDocument):
-    num_items_array_indexing = 0
+    num_docs = 0
+    delta = 0
 
-    def __init__(self, avg_size, partitions, num_items=0):
+    def __init__(self, avg_size, partitions, num_docs, delta=0):
         super(ReverseLookupDocumentArrayIndexing, self).__init__(avg_size, partitions)
-        ReverseLookupDocumentArrayIndexing.num_items_array_indexing = num_items
+        ReverseLookupDocumentArrayIndexing.num_docs = num_docs
+        ReverseLookupDocumentArrayIndexing.delta = delta
 
     @staticmethod
-    def _build_achievements(alphabet):
-        return random.sample(xrange(ReverseLookupDocumentArrayIndexing.num_items_array_indexing), 10)
+    def _build_achievements(alphabet, key):
+        spl = key.split('-')
+        if spl[0] == 'n1ql':
+            # these docs are never updated
+            return [((int(spl[1].lstrip('0')) - 1)*10 + i +
+                     ReverseLookupDocumentArrayIndexing.delta) for i in xrange(10)]
+        else:
+            # these docs are involved in updating
+            return [((int(spl[1].lstrip('0')) - 1)*10 + i +
+                     ReverseLookupDocumentArrayIndexing.num_docs*10 +
+                     ReverseLookupDocumentArrayIndexing.delta) for i in xrange(10)]
 
 
 class MergeDocument(ReverseLookupDocument):
