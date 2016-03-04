@@ -222,7 +222,7 @@ class NewDocument(Iterator):
     def _build_extras(alphabet, length):
         return alphabet[0:length]
 
-    def _build_doc(self, alphabet, body_length, key):
+    def _build_doc(self, alphabet, body_length, key=None):
         if not self.extra_fields:
             return {
                 'name': self._build_name(alphabet),
