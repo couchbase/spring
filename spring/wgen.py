@@ -12,6 +12,8 @@ from twisted.internet import reactor
 
 from dcp import DcpClient, ResponseHandler
 from couchbase import Couchbase
+from couchbase.n1ql import MutationState
+from couchbase.n1ql import N1QLQuery
 from couchbase.exceptions import ValueFormatError
 from spring.cbgen import CBGen, CBAsyncGen, N1QLGen, SpatialGen, FtsGen, ElasticGen
 from spring.docgen import (ExistingKey, KeyForRemoval, KeyForCASUpdate, 
@@ -453,7 +455,11 @@ class N1QLWorker(Worker):
         self.name = 'n1ql-worker'
 
         host, port = self.ts.node.split(':')
-        params = {'bucket': self.ts.bucket, 'host': host, 'port': port,
+        bucket = self.ts.bucket
+        if workload_settings.n1ql_op == 'ryow':
+                bucket += '?fetch_mutation_tokens=true'
+
+        params = {'bucket': bucket, 'host': host, 'port': port,
                   'username': self.ts.bucket, 'password': self.ts.password}
 
         self.existing_keys = ExistingKey(self.ws.working_set,
@@ -523,7 +529,7 @@ class N1QLWorker(Worker):
                 deleted_capped_items_tmp = self.deleted_capped_items.value - self.BATCH_SIZE
             deleted_capped_spot = (deleted_capped_items_tmp +
                             self.BATCH_SIZE * self.total_workers)
-        
+
         casupdated_items_tmp = casupdated_spot = 0
         if self.ws.n1ql_op == 'update':
             with self.lock:
@@ -560,7 +566,30 @@ class N1QLWorker(Worker):
                 doc['bucket'] = self.ts.bucket
                 ddoc_name, view_name, query = self.new_queries.next(doc)
                 self.cb.query(ddoc_name, view_name, query=query)
-        
+
+        elif self.ws.n1ql_op == 'ryow':
+            for _ in xrange(self.BATCH_SIZE):
+                query = self.ws.n1ql_queries[0]['statement'][1:-1]
+                if self.ws.n1ql_queries[0]['prepared'] == "singleton_unique_lookup":
+                    by_key = 'email'
+                elif self.ws.n1ql_queries[0]['prepared'] == "range_scan":
+                    by_key = 'capped_small'
+                else:
+                    logger.error('n1ql_queries {} not defined'.format(self.ws.n1ql_queries))
+                key1 = self.keys_for_casupdate.next(self.sid, curr_items_spot, deleted_spot)
+                doc1 = self.docs.next(key1)
+                key2 = self.keys_for_casupdate.next(self.sid, curr_items_spot, deleted_spot)
+                doc2 = self.docs.next(key2)
+                rvs = self.cb.client.upsert_multi({key1: doc2, key2: doc1})
+                # This is a part of requirements:
+                # Each n1ql worker sleeps for 1 seconds.
+                time.sleep(float(self.ws.n1ql_queries[0]['time_sleep']))
+                ms = MutationState()
+                ms.add_results(*rvs.values())
+                nq = N1QLQuery(query.format(doc2[by_key]))
+                nq.consistent_with(ms)
+                len(list(self.cb.client.n1ql_query(nq)))
+
         elif self.ws.n1ql_op == 'rangeupdate':
             for _ in xrange(self.BATCH_SIZE):
                 key = self.keys_for_casupdate.next(self.sid, curr_items_spot, deleted_spot)

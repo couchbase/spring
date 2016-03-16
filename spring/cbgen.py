@@ -14,7 +14,7 @@ from couchbase.exceptions import (ConnectError,
                                   TemporaryFailError,
                                   TimeoutError,
                                   )
-from couchbase.connection import Connection
+from couchbase.bucket import Bucket
 from txcouchbase.connection import Connection as TxConnection
 import copy
 import itertools
@@ -64,7 +64,9 @@ class CBGen(CBAsyncGen):
     NODES_UPDATE_INTERVAL = 15
 
     def __init__(self, **kwargs):
-        self.client = Connection(timeout=60, quiet=True, **kwargs)
+        self.client = Bucket('couchbase://{}:{}/{}'.format(
+                kwargs['host'], kwargs.get('port', 8091), kwargs['bucket']),
+                password=kwargs['password'])
         self.session = requests.Session()
         self.session.auth = (kwargs['username'], kwargs['password'])
         self.server_nodes = ['{}:{}'.format(kwargs['host'],
