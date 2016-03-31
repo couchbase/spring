@@ -425,7 +425,7 @@ class ReverseLookupDocumentArrayIndexing(ReverseLookupDocument):
         ReverseLookupDocumentArrayIndexing.delta = delta
 
     @staticmethod
-    def _build_achievements(alphabet, key):
+    def _build_achievements1(alphabet, key):
         spl = key.split('-')
         if spl[0] == 'n1ql':
             # these docs are never updated
@@ -436,6 +436,47 @@ class ReverseLookupDocumentArrayIndexing(ReverseLookupDocument):
             return [((int(spl[1].lstrip('0')) - 1)*10 + i +
                      ReverseLookupDocumentArrayIndexing.num_docs*10 +
                      ReverseLookupDocumentArrayIndexing.delta) for i in xrange(10)]
+
+    @staticmethod
+    def _build_achievements2(alphabet, key):
+        spl = key.split('-')
+        if spl[0] == 'n1ql':
+            # these docs are never updated
+            return [((int(spl[1].lstrip('0'))//100)*10 + i +
+                     ReverseLookupDocumentArrayIndexing.delta) for i in xrange(10)]
+        else:
+            # these docs are involved in updating
+            return [((int(spl[1].lstrip('0'))//100)*10 + i +
+                     ReverseLookupDocumentArrayIndexing.num_docs*10 +
+                     ReverseLookupDocumentArrayIndexing.delta) for i in xrange(10)]
+
+    def next(self, key):
+        id = int(key[-12:]) + 1
+        prefix = key[:-12]
+        alphabet = self._build_alphabet(key)
+        size = self._size()
+
+        return {
+            'name': self._build_name(alphabet),
+            'email': self._build_email(alphabet),
+            'alt_email': self._build_alt_email(alphabet),
+            'street': self._build_street(alphabet),
+            'city': self._build_city(alphabet),
+            'county': self._build_county(alphabet),
+            'state': self._build_state(alphabet),
+            'full_state': self._build_full_state(alphabet),
+            'country': self._build_country(alphabet),
+            'realm': self._build_realm(alphabet),
+            'coins': self._build_coins(alphabet),
+            'category': self._build_category(alphabet),
+            'achievements1': self._build_achievements1(alphabet, key),
+            'achievements2': self._build_achievements2(alphabet, key),
+            'gmtime': self._build_gmtime(alphabet),
+            'year': self._build_year(alphabet),
+            'body': self._build_body(alphabet, size),
+            'capped_small': self._capped_field(alphabet, prefix, id, 100),
+            'partition_id': self._build_partition(alphabet, id)
+        }
 
 
 class MergeDocument(ReverseLookupDocument):

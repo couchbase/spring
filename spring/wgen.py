@@ -2,6 +2,7 @@ import cPickle
 import logging
 import subprocess
 import time
+import random
 from multiprocessing import Process, Value, Lock, Event
 
 from decorator import decorator
@@ -82,7 +83,8 @@ class Worker(object):
             if self.ws.updates:
                 # plus 10 to all values in array when updating doc
                 self.docs = ReverseLookupDocumentArrayIndexing(
-                    self.ws.size, self.ws.doc_partitions, self.ws.items, delta=10)
+                    self.ws.size, self.ws.doc_partitions, self.ws.items,
+                    delta=random.randint(0, 10))
             else:
                 self.docs = ReverseLookupDocumentArrayIndexing(
                     self.ws.size, self.ws.doc_partitions, self.ws.items)
@@ -466,7 +468,8 @@ class N1QLWorker(Worker):
         elif self.ws.doc_gen == 'reverse_lookup_array_indexing':
             if self.ws.updates:
                 self.docs = ReverseLookupDocumentArrayIndexing(
-                    self.ws.size, self.ws.doc_partitions, self.ws.items, delta=10)
+                    self.ws.size, self.ws.doc_partitions, self.ws.items,
+                    delta=random.randint(0, 10))
             else:
                  self.docs = ReverseLookupDocumentArrayIndexing(
                     self.ws.size, self.ws.doc_partitions, self.ws.items)
