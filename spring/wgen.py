@@ -47,6 +47,7 @@ class Worker(object):
         self.ws = workload_settings
         self.ts = target_settings
         self.shutdown_event = shutdown_event
+        logger.setLevel(logging.INFO)
 
         self.existing_keys = ExistingKey(self.ws.working_set,
                                          self.ws.working_set_access,
