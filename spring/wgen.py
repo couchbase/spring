@@ -34,6 +34,8 @@ def with_sleep(method, *args):
         delta = self.target_time - actual_time
         if delta > 0:
             time.sleep(self.CORRECTION_FACTOR * delta)
+        else:
+            self.fallingBehindCount += 1
 
 
 class Worker(object):
@@ -108,6 +110,8 @@ class Worker(object):
             self.init_db({'bucket': self.ts.bucket, 'host': host, 'port': port,
                           'username': self.ts.bucket,
                           'password': self.ts.password})
+
+        self.fallingBehindCount = 0
 
     def init_db(self, params):
         try:
@@ -381,6 +385,9 @@ class QueryWorker(Worker):
         except (KeyboardInterrupt, ValueFormatError, AttributeError) as e:
             logger.info('Interrupted: {}-{}-{}'.format(self.name, self.sid, e))
         else:
+            if self.fallingBehindCount > 0:
+                 logger.info('Worker {0} fell behind {1} times.'
+                             .format(self.name, self.fallingBehindCount))
             logger.info('Finished: {}-{}'.format(self.name, self.sid))
 
 
@@ -610,6 +617,9 @@ class N1QLWorker(Worker):
         except (KeyboardInterrupt, ValueFormatError, AttributeError) as e:
             logger.info('Interrupted: {}-{}-{}'.format(self.name, self.sid, e))
         else:
+            if self.fallingBehindCount > 0:
+                 logger.info('Worker {0} fell behind {1} times.'.
+                             format(self.name, self.fallingBehindCount))
             logger.info('Finished: {}-{}'.format(self.name, self.sid))
 
 class DcpWorkerFactory(object):
