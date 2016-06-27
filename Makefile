@@ -1,20 +1,29 @@
-build: ; \
-    gcc -g -fwrapv -O2 -Wall -Wstrict-prototypes -shared -O2 -fPIC -lpython \
-    -o fastdocgen.so src/fastdocgen.c \
-    -I/usr/include/python2.7
+.PHONY: build
 
-test: ; \
-    python tests.py -v
+ENV := env
 
-bench: ; \
-    python benchmark.py; \
-    gprof2dot -f pstats benchmark.prof | dot -Tsvg -o benchmark.svg
+build: ext
+	virtualenv -p python2.7 ${ENV}
+	${ENV}/bin/pip install -r requirements.txt
 
-pep8: ; \
-    pep8 --ignore E501 spring tests.py benchmark.py
+ext:
+	gcc -g -fwrapv -O2 -Wall -Wstrict-prototypes -shared -O2 -fPIC \
+		-lpython2.7 \
+		-I/usr/include/python2.7 \
+		-o fastdocgen.so src/fastdocgen.c
 
-clean: ; \
-    rm -fr build dist spring.egg-info fastdocgen.so benchmark.prof benchmark.svg
+test:
+	${ENV}/bin/python tests.py -v
 
-pypi: ; \
-    python setup.py build sdist upload
+bench:
+	${ENV}/bin/python benchmark.py
+	gprof2dot -f pstats benchmark.prof | dot -Tsvg -o benchmark.svg
+
+flake8:
+	${ENV}/bin/flake8 --statistics spring *.py
+
+clean:
+	rm -fr build dist spring.egg-info fastdocgen.so benchmark.prof benchmark.svg env
+
+pypi:
+	${ENV}/bin/python setup.py build sdist upload
