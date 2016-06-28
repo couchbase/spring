@@ -1,6 +1,6 @@
 import urllib3
 
-from random import choice, shuffle
+from random import choice
 from threading import Thread
 from time import time, sleep
 
@@ -16,13 +16,10 @@ from couchbase.exceptions import (ConnectError,
                                   )
 from couchbase.connection import Connection
 from txcouchbase.connection import Connection as TxConnection
-import copy
-import itertools
-import json
+
 import requests
 from decorator import decorator
 from logger import logger
-from requests.auth import HTTPBasicAuth
 
 
 @decorator
@@ -181,92 +178,3 @@ class N1QLGen(CBGen):
         response.read(cache_content=False)
         latency = time() - t0
         return None, latency
-
-
-class FtsGen(CBGen):
-        __FTS_QUERY = {"ctl": {"timeout": 0, "consistency": {"vectors": {}, "level": ""}},
-                       "query": {}, "size": 10}
-
-        def __init__(self, cb_url, settings):
-            self.fts_query = "http://{}:8094/api/".format(cb_url)
-            self.auth = HTTPBasicAuth('Administrator', 'password')
-            self.header = {'Content-Type': 'application/json'}
-            self.requests = requests.Session()
-            '''
-              keep-alive is used false to avoid any cache.
-              Using keep-alive false
-              makes it a  real life scenario
-            '''
-            self.requests.keep_alive = False
-            self.query = self.__FTS_QUERY
-            self.query_list = []
-            self.query_iterator = None
-            self.settings = settings
-            self.fts_copy = copy.deepcopy(self.fts_query)
-
-        def form_url(self):
-            return {'url': self.fts_query,
-                    'auth': self.auth,
-                    'headers': self.header,
-                    'data': json.dumps(self.query)
-                    }
-
-        def prepare_query_list(self, type='query'):
-            file = open(self.settings.query_file, 'r')
-            for line in file:
-                temp_query = {}
-                term, freq = line.split()
-                temp_query[self.settings.type] = term
-                temp_query['field'] = "text"
-                self.query['query'] = temp_query
-                self.query['size'] = self.settings.query_size
-                self.fts_query += 'index/' + self.settings.name + '/' + type
-                self.query_list.append(self.form_url())
-                self.fts_query = self.fts_copy
-            shuffle(self.query_list)
-            self.query_iterator = itertools.cycle(self.query_list)
-
-        def next(self):
-            return self.requests.post, self.query_iterator.next()
-
-        def prepare_query(self, ttype='query'):
-            self.fts_query = self.fts_copy
-            if ttype == 'query':
-                self.prepare_query_list()
-            elif ttype == 'count':
-                self.fts_query += 'index/' + self.settings.name + '/' + type
-                return self.requests.get, self.form_url()
-            elif ttype == 'nsstats':
-                self.fts_query += ttype
-                return self.requests.get, self.form_url()
-
-
-class ElasticGen(FtsGen):
-
-        __ELASTIC_QUERY = {"query": {}, "size": 10}
-
-        def __init__(self, elastic_url, settings):
-            super(ElasticGen, self).__init__(elastic_url, settings)
-            self.query = self.__ELASTIC_QUERY
-            self.elastic_query = "http://{}:9200/".format(elastic_url)
-            self.elastic_copy = copy.deepcopy(self.elastic_query)
-
-        def prepare_query(self):
-            file = open(self.settings.query_file, 'r')
-            for line in file:
-                self.elastic_query = self.elastic_copy
-                term, freq = line.split()
-                self.query['size'] = self.settings.query_size
-                self.elastic_query += self.settings.name + '/_search?pretty'
-                tmp_query = {}
-                tmp_query_txt = {}
-                tmp_query_txt['text'] = term
-                tmp_query[self.settings.type] = tmp_query_txt
-                self.query['query'] = tmp_query
-                elastic_url = {'url': self.elastic_query,
-                               'headers': self.header,
-                               'data': json.dumps(self.query)
-                               }
-                self.query_list.append(elastic_url)
-            shuffle(self.query_list)
-            self.query_iterator = itertools.cycle(self.query_list)
