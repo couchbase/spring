@@ -13,7 +13,7 @@ from twisted.internet import reactor
 from dcp import DcpClient, ResponseHandler
 from couchbase import Couchbase
 from couchbase.exceptions import ValueFormatError
-from spring.cbgen import CBGen, CBAsyncGen, N1QLGen, SpatialGen
+from spring.cbgen import CBGen, CBAsyncGen, N1QLGen, SpatialGen, FtsGen, ElasticGen
 from spring.docgen import (ExistingKey, KeyForRemoval, KeyForCASUpdate, 
                            SequentialHotKey, NewKey, NewDocument, NewNestedDocument,
                            MergeDocument, ReverseLookupDocument, NewDocumentFromSpatialFile,
@@ -705,63 +705,43 @@ class DcpWorker(Worker):
 
 class FtsWorkerFactory(object):
     def __new__(self, workload_settings):
-        num_workers = 0
-        if hasattr(workload_settings, "fts"):
-            num_workers = 1
-        return FtsWorker, num_workers
+        return FtsWorker, workload_settings.fts_config.worker
 
 
-class FtsWorker(object):
-    """
-    This class downloads files filled with multiple pickle objects and load the
-    doc/dict to the KV store of Couchbase.
-    """
+class FtsWorker(Worker):
+    BATCH_SIZE = 100
+
     def __init__(self, workload_settings, target_settings, shutdown_event=None):
-        self.ws = workload_settings
-        self.ts = target_settings
-        self.shutdown_event = shutdown_event
-        self.log_level = logging.INFO
+        super(FtsWorker, self).__init__(workload_settings, target_settings,
+                                        shutdown_event)
+        host, port = self.ts.node.split(':')
+        if self.ws.fts_config.elastic:
+            instance = ElasticGen(host, self.ws.fts_config)
+            self.name = "ElasticWorker"
+        else:
+            instance = FtsGen(host, self.ws.fts_config)
+            self.name = "FtsWorker"
 
-    def _setup_logging(self, sid):
-        LOG_FILENAME = "/tmp/spring.worker.fts.proc.{}.log".format(sid)
-        self.logger = logging.getLogger('FtsWorker')
-        self.logger.setLevel(self.log_level)
-        handler = logging.handlers.RotatingFileHandler(
-                    LOG_FILENAME, maxBytes=1024000, backupCount=5)
-        handler.setLevel(self.log_level)
-        fmt = logging.Formatter(
-                "%(asctime)s - %(levelname)s - %(funcName)s - line %(lineno)s" +
-                " %(message)s")
-        handler.formatter = fmt
-        self.logger.addHandler(handler)
-        self.propagate = False
+        self.fts_es_query = instance
+        self.fts_es_query.prepare_query()
+
+    def do_batch(self):
+        for i in range(self.BATCH_SIZE):
+            if not self.time_to_stop():
+                cmd, args = self.fts_es_query.next()
+                cmd(**args)
 
     def run(self, sid, lock):
-        self._setup_logging(sid)
-
-        self.logger.info("Started FtsWorker")
-
-        db_url = self.ws.fts.doc_database_url
-        self.logger.info("Loading database url %s", db_url)
-        fname = "/tmp/" + db_url.split("/")[-1]
-        self.logger.info("Downloading file to %s" % fname)
-        cmd = "wget -O {} -nc \"{}\" ".format(fname, db_url)
-        self.logger.info("Calling %s" % cmd)
-        subprocess.call(cmd, shell=True)
-        self.load_database(fname)
-
-    def load_database(self, fname):
-        host, port = self.ts.node.split(":")
-        c = Couchbase.connect(bucket=self.ts.bucket, host=host)
-        counter = 0
-        with open(fname, 'r') as f:
-            while True:
-                try:
-                    d = cPickle.load(f)
-                    c.set(str(counter), d)
-                    counter += 1
-                except EOFError:
-                    break
+        logger.info("Started {}".format(self.name))
+        self.sid = sid
+        try:
+            logger.info('Started: {}-{}'.format(self.name, self.sid))
+            while not self.time_to_stop():
+                self.do_batch()
+        except (KeyboardInterrupt, ValueFormatError, AttributeError) as e:
+            logger.info('Interrupted: {}-{}-{}'.format(self.name, self.sid, e))
+        else:
+            logger.info('Finished: {}-{}'.format(self.name, self.sid))
 
 
 class WorkloadGen(object):
