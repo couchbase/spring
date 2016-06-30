@@ -705,7 +705,7 @@ class DcpWorker(Worker):
 
 class FtsWorkerFactory(object):
     def __new__(self, workload_settings):
-        if hasattr(workload_settings, 'fts_config'):
+        if not workload_settings.fts_config:
             return FtsWorker, workload_settings.fts_config.worker
         return FtsWorker, 0
 
