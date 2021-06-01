@@ -19,7 +19,7 @@ setup(
         'logger==1.4',
         'numpy==1.11.0',
         'requests==2.1.0',
-        'urllib3==1.10.4',
+        'urllib3==1.26.5',
         'twisted==16.2.0',
         'dcp-client'
     ],
