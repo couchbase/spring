@@ -17,7 +17,7 @@ setup(
         'couchbase==2.1.0',
         'decorator==4.0.10',
         'logger==1.4',
-        'numpy==1.11.0',
+        'numpy==1.22.0',
         'requests==2.1.0',
         'urllib3==1.10.4',
         'twisted==16.2.0',
