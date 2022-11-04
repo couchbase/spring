@@ -20,7 +20,7 @@ setup(
         'numpy==1.11.0',
         'requests==2.1.0',
         'urllib3==1.10.4',
-        'twisted==16.2.0',
+        'twisted==22.10.0',
         'dcp-client'
     ],
     dependency_links=[
